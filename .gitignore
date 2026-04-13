@@ -1,0 +1,27 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Conda
+.conda/
+
+# Journal data — PRIVATE
+journals/
+output/
+*.jpg
+*.jpeg
+*.png
+*.heic
+*.txt          # extracted journal text
+
+# LanguageTool cache (large, auto-downloads)
+~/.cache/language_tool_python/
+
+# macOS
+.DS_Store
+
+# ChromaDB (future Module B — user's vector database)
+*.db
+chroma/

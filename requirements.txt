@@ -1,0 +1,26 @@
+# Local_Journal_Buddy — Module A: OCR Engine
+# macOS only (Apple Vision Framework via pyobjc)
+# Python 3.10+ recommended · Homebrew Python tested
+
+# ── macOS Vision / Cocoa bridge ───────────────────────────────────────────────
+pyobjc-core>=10.0
+pyobjc-framework-Cocoa>=10.0
+pyobjc-framework-Vision>=10.0
+pyobjc-framework-CoreImage>=10.0
+
+
+# ── Standard library only beyond this point ───────────────────────────────────
+# (dataclasses, json, pathlib, argparse, logging are all built-in)
+# No third-party deps required for Module A.
+
+# ── Future modules (listed here for reference, uncomment when adding) ─────────
+# Module B — Librarian (ChromaDB + embeddings)
+# chromadb>=0.5.0
+# sentence-transformers>=3.0.0
+# torch>=2.0.0          # pulled in by sentence-transformers
+
+# Module C — Brain (Ollama)
+# requests>=2.31.0      # for Ollama REST API calls
+
+# Module D — Tauri interface
+# (Rust/Node side — no Python deps)

@@ -25,3 +25,7 @@ output/
 # ChromaDB (future Module B — user's vector database)
 *.db
 chroma/
+
+# Start Up Scripts 
+start.sh
+stop.sh

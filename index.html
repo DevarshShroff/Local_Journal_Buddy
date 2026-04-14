@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Local Journal Buddy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --forest:#365946;--leaf:#61A641;--sage:#A6D98F;--sun:#F2D16D;--cream:#F2F2F2;
+  --forest-light:#4a7a60;--forest-dark:#243d31;--ink:#1e2e25;--muted:#6b8a77;
+  --card-bg:#ffffff;--surface:#f7faf8;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink)}
+.app{display:flex;height:100vh;overflow:hidden}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;min-width:220px;background:var(--forest);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.sidebar-floral{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:.12}
+.sidebar-top{padding:28px 20px 20px;border-bottom:1px solid rgba(255,255,255,.1);position:relative;z-index:1}
+.app-name{font-family:'Lora',serif;color:var(--cream);font-size:17px;font-weight:500;line-height:1.3}
+.app-tagline{font-size:11px;color:var(--sage);margin-top:4px;opacity:.8}
+.nav{padding:16px 12px;flex:1;position:relative;z-index:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:rgba(242,242,242,.65);font-size:13.5px;transition:all .18s;margin-bottom:2px;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.08);color:var(--cream)}
+.nav-item.active{background:rgba(166,217,143,.2);color:var(--sage)}
+.nav-icon{width:18px;height:18px;flex-shrink:0}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.1);position:relative;z-index:1}
+.streak-badge{background:rgba(242,209,109,.15);border:1px solid rgba(242,209,109,.3);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px}
+.streak-num{color:var(--sun);font-size:18px;font-weight:500;font-family:'Lora',serif}
+.streak-label{color:rgba(242,242,242,.6);font-size:11px;line-height:1.3}
+
+/* ── Main ── */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+.page{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.page.active{display:flex}
+
+/* ── Page header ── */
+.page-header{padding:28px 32px 0;display:flex;align-items:flex-start;justify-content:space-between}
+.page-title{font-family:'Lora',serif;font-size:24px;font-weight:500;color:var(--forest-dark)}
+.page-subtitle{font-size:13px;color:var(--muted);margin-top:3px}
+
+/* ── Buttons ── */
+.btn-primary{background:var(--forest);color:var(--cream);border:none;border-radius:10px;padding:9px 18px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;display:flex;align-items:center;gap:7px;transition:background .15s;white-space:nowrap}
+.btn-primary:hover{background:var(--forest-light)}
+.btn-secondary{background:transparent;color:var(--forest);border:1.5px solid var(--forest);border-radius:10px;padding:8px 16px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all .15s}
+.btn-secondary:hover{background:var(--forest);color:white}
+
+/* ── Toolbar ── */
+.toolbar{padding:16px 32px;display:flex;gap:12px;align-items:center}
+.search-wrap{flex:1;position:relative}
+.search-input{width:100%;background:white;border:1.5px solid #e2ede7;border-radius:10px;padding:9px 14px 9px 38px;font-size:13.5px;color:var(--ink);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--leaf)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.filter-chip{background:white;border:1.5px solid #e2ede7;border-radius:20px;padding:6px 14px;font-size:12.5px;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+.filter-chip.active{background:var(--forest);color:white;border-color:var(--forest)}
+.filter-chip:hover:not(.active){border-color:var(--leaf);color:var(--forest)}
+
+/* ── Entry cards ── */
+.entries-grid{padding:8px 32px 32px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.entry-card{background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:18px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.entry-card:hover{border-color:var(--sage);transform:translateY(-2px);box-shadow:0 4px 16px rgba(54,89,70,.1)}
+.entry-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.entry-card.mood-great::before{background:var(--leaf)}
+.entry-card.mood-okay::before{background:var(--sun)}
+.entry-card.mood-hard::before{background:#d4896a}
+.entry-card.mood-anxious::before{background:var(--sage)}
+.entry-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.entry-date{font-size:12px;color:var(--muted)}
+.mood-dot{width:8px;height:8px;border-radius:50%}
+.mood-dot.great{background:var(--leaf)}.mood-dot.okay{background:var(--sun)}.mood-dot.hard{background:#d4896a}.mood-dot.anxious{background:var(--sage)}
+.entry-preview{font-family:'Lora',serif;font-size:14px;line-height:1.6;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.entry-tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.tag{background:var(--cream);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--muted)}
+.tag.highlight{background:rgba(97,166,65,.1);color:var(--forest)}
+.entry-footer{margin-top:14px;display:flex;align-items:center;justify-content:space-between}
+.entry-words{font-size:11px;color:var(--muted)}
+.entry-source{font-size:10.5px;color:var(--muted);background:var(--cream);border-radius:5px;padding:2px 7px}
+
+/* ── Calendar strip ── */
+.calendar-strip{padding:0 32px 8px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.calendar-strip::-webkit-scrollbar{display:none}
+.cal-day{flex-shrink:0;width:44px;background:white;border:1.5px solid #e8f0eb;border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;transition:all .15s}
+.cal-day:hover,.cal-day.has-entry{border-color:var(--sage)}
+.cal-day.today{background:var(--forest);border-color:var(--forest)}
+.cal-day .cal-num{font-size:14px;font-weight:500;color:var(--ink)}
+.cal-day .cal-label{font-size:10px;color:var(--muted);margin-top:1px}
+.cal-day.today .cal-num,.cal-day.today .cal-label{color:white}
+.cal-pip{width:5px;height:5px;border-radius:50%;background:var(--leaf);margin:4px auto 0}
+.cal-day.today .cal-pip{background:var(--sage)}
+
+/* ── New Entry page ── */
+.new-entry-wrap{padding:28px 32px;display:flex;flex-direction:column;flex:1}
+.mode-tabs{display:flex;gap:8px;margin-bottom:24px}
+.mode-tab{padding:8px 18px;border-radius:10px;border:1.5px solid #e2ede7;background:white;font-size:13px;cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px;transition:all .15s}
+.mode-tab.active{background:var(--forest);color:white;border-color:var(--forest)}
+.mode-tab:hover:not(.active){border-color:var(--forest);color:var(--forest)}
+.type-tab-content{display:none;flex-direction:column;gap:16px;flex:1}
+.type-tab-content.active{display:flex}
+.upload-tab-content{display:none;flex-direction:column;gap:16px}
+.upload-tab-content.active{display:flex}
+.entry-date-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.date-input{background:white;border:1.5px solid #e2ede7;border-radius:10px;padding:8px 14px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none}
+.date-input:focus{border-color:var(--leaf)}
+.mood-picker{display:flex;gap:8px;align-items:center}
+.mood-picker-label{font-size:13px;color:var(--muted)}
+.mood-btn{width:34px;height:34px;border-radius:8px;border:1.5px solid #e2ede7;background:white;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.mood-btn:hover,.mood-btn.selected{border-color:var(--leaf);background:rgba(97,166,65,.08);transform:scale(1.1)}
+.journal-textarea{flex:1;background:white;border:1.5px solid #e2ede7;border-radius:14px;padding:20px 24px;font-family:'Lora',serif;font-size:15px;line-height:1.8;color:var(--ink);resize:none;outline:none;min-height:280px;transition:border-color .15s}
+.journal-textarea:focus{border-color:var(--sage)}
+.journal-textarea::placeholder{color:#c0cfc7;font-style:italic}
+.char-count{font-size:11.5px;color:var(--muted);text-align:right;margin-top:-8px}
+.entry-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+.drop-zone{border:2.5px dashed var(--sage);border-radius:16px;background:rgba(166,217,143,.05);padding:48px 32px;text-align:center;cursor:pointer;transition:all .2s}
+.drop-zone:hover,.drop-zone.dragover{background:rgba(166,217,143,.12);border-color:var(--leaf)}
+.drop-icon{width:52px;height:52px;background:rgba(97,166,65,.1);border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center}
+.drop-title{font-size:15px;font-weight:500;color:var(--forest);margin-bottom:6px}
+.drop-sub{font-size:13px;color:var(--muted)}
+.drop-formats{margin-top:8px;font-size:12px;color:var(--muted);opacity:.7}
+.upload-preview{display:none;background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:16px;gap:14px;align-items:center}
+.upload-preview.show{display:flex}
+.preview-thumb{width:56px;height:56px;border-radius:8px;background:var(--cream);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+.preview-info{flex:1}
+.preview-name{font-size:13.5px;font-weight:500;color:var(--ink)}
+.preview-size{font-size:12px;color:var(--muted);margin-top:2px}
+.ocr-status{margin-top:6px;font-size:12px;color:var(--leaf);display:flex;align-items:center;gap:5px}
+.processing-bar{display:none;background:#e8f0eb;border-radius:4px;height:4px;overflow:hidden;margin-top:8px}
+.processing-bar.show{display:block}
+.processing-fill{height:100%;background:linear-gradient(90deg,var(--leaf),var(--sage));border-radius:4px;width:0%;transition:width .3s}
+
+/* ── Chat page ── */
+.chat-wrap{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.chat-header{padding:20px 28px;border-bottom:1px solid #e8f0eb;background:white;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.chat-avatar{width:40px;height:40px;background:var(--forest);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chat-title{font-family:'Lora',serif;font-size:16px;font-weight:500;color:var(--forest-dark)}
+.chat-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.online-dot{width:8px;height:8px;background:var(--leaf);border-radius:50%;margin-left:auto}
+.chat-messages{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:18px;background:var(--surface)}
+.message{display:flex;gap:10px;max-width:82%;animation:fadeSlideIn .22s ease}
+.message.user{align-self:flex-end;flex-direction:row-reverse}
+.msg-avatar{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500}
+.msg-avatar.ai{background:var(--forest);color:white}
+.msg-avatar.user{background:var(--sun);color:var(--forest-dark)}
+.msg-body{display:flex;flex-direction:column;gap:4px}
+.msg-bubble{padding:12px 16px;border-radius:14px;font-size:14px;line-height:1.65}
+.message.ai .msg-bubble{background:white;border:1px solid #e8f0eb;color:var(--ink);border-radius:4px 14px 14px 14px}
+.message.user .msg-bubble{background:var(--forest);color:white;border-radius:14px 4px 14px 14px}
+.msg-time{font-size:11px;color:var(--muted)}
+.message.user .msg-time{text-align:right}
+.msg-sources{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.source-chip{background:rgba(97,166,65,.1);border:1px solid rgba(97,166,65,.2);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--forest)}
+.loading-msg{align-self:center;text-align:center;padding:20px}
+.quote-card{background:white;border:1.5px solid #e8f0eb;border-radius:16px;padding:20px 24px;max-width:380px;position:relative;overflow:hidden}
+.quote-floral{position:absolute;right:-10px;bottom:-10px;opacity:.08;pointer-events:none}
+.quote-text{font-family:'Lora',serif;font-style:italic;font-size:14px;line-height:1.7;color:var(--forest-dark);position:relative;z-index:1}
+.quote-author{font-size:12px;color:var(--muted);margin-top:8px}
+.quote-loading-dots{display:flex;gap:5px;justify-content:center;margin-top:12px}
+.q-dot{width:6px;height:6px;border-radius:50%;background:var(--sage);animation:qdot 1.2s infinite}
+.q-dot:nth-child(2){animation-delay:.2s}.q-dot:nth-child(3){animation-delay:.4s}
+.suggested-prompts{padding:16px 28px 8px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.prompt-chip{background:white;border:1.5px solid #e2ede7;border-radius:20px;padding:7px 14px;font-size:12.5px;cursor:pointer;color:var(--forest);transition:all .15s;font-family:'DM Sans',sans-serif}
+.prompt-chip:hover{background:var(--forest);color:white;border-color:var(--forest)}
+.chat-input-area{padding:16px 28px 20px;background:white;border-top:1px solid #e8f0eb;flex-shrink:0}
+.chat-input-wrap{display:flex;gap:10px;align-items:flex-end;background:var(--surface);border:1.5px solid #e2ede7;border-radius:14px;padding:10px 10px 10px 16px;transition:border-color .15s}
+.chat-input-wrap:focus-within{border-color:var(--sage)}
+.chat-input{flex:1;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);resize:none;max-height:100px;line-height:1.5}
+.chat-input::placeholder{color:#b8ccc2}
+.send-btn{width:36px;height:36px;background:var(--forest);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.send-btn:hover{background:var(--forest-light)}
+.send-btn:disabled{background:#c5d9cd;cursor:not-allowed}
+
+/* ── Insights ── */
+.insights-wrap{padding:28px 32px;overflow-y:auto;flex:1}
+.insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.insight-card{background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:18px}
+.insight-card.full{grid-column:1/-1}
+.insight-label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.insight-value{font-family:'Lora',serif;font-size:28px;color:var(--forest-dark)}
+.insight-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.mood-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.mood-bar-label{font-size:13px;color:var(--ink);width:72px;flex-shrink:0}
+.mood-bar-track{flex:1;background:var(--cream);border-radius:4px;height:8px;overflow:hidden}
+.mood-bar-fill{height:100%;border-radius:4px}
+.mood-bar-num{font-size:12px;color:var(--muted);width:28px;text-align:right;flex-shrink:0}
+.word-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.word-tag{background:rgba(97,166,65,.08);border-radius:8px;padding:5px 12px;font-size:13px;color:var(--forest);border:1px solid rgba(97,166,65,.15)}
+.word-tag.big{font-size:16px;background:rgba(97,166,65,.14)}
+.word-tag.small{font-size:11px;opacity:.75}
+
+@keyframes fadeSlideIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes qdot{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+@keyframes qfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.quote-fade{animation:qfade .5s ease}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <svg class="sidebar-floral" viewBox="0 0 220 600" fill="none">
+      <circle cx="180" cy="80" r="55" fill="white"/>
+      <circle cx="160" cy="55" r="30" fill="white"/>
+      <circle cx="200" cy="110" r="25" fill="white"/>
+      <circle cx="30" cy="480" r="65" fill="white"/>
+      <circle cx="10" cy="510" r="35" fill="white"/>
+      <circle cx="60" cy="500" r="28" fill="white"/>
+      <path d="M150 200 Q170 170 190 200 Q170 230 150 200Z" fill="white"/>
+      <path d="M160 190 Q180 160 200 190 Q180 220 160 190Z" fill="white"/>
+      <path d="M20 350 Q40 320 60 350 Q40 380 20 350Z" fill="white"/>
+    </svg>
+    <div class="sidebar-top">
+      <div class="app-name">📓 Journal Buddy</div>
+      <div class="app-tagline">your private second brain</div>
+    </div>
+    <div class="nav">
+      <div class="nav-item active" onclick="showPage('library',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="8" rx="1.5"/><rect x="11" y="3" width="6" height="5" rx="1.5"/><rect x="11" y="10" width="6" height="7" rx="1.5"/><rect x="3" y="13" width="6" height="4" rx="1.5"/></svg>
+        Library
+      </div>
+      <div class="nav-item" onclick="showPage('new-entry',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+        New Entry
+      </div>
+      <div class="nav-item" onclick="showPage('chat',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h12M4 10h8M4 14h5"/><circle cx="16" cy="14" r="3"/></svg>
+        Chat with Journal
+      </div>
+      <div class="nav-item" onclick="showPage('insights',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 14l4-4 3 3 5-6"/><circle cx="4" cy="14" r="1.5" fill="currentColor"/></svg>
+        Insights
+      </div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="streak-badge">
+        <div class="streak-num">7</div>
+        <div class="streak-label">day streak<br>keep going!</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Library -->
+    <div id="page-library" class="page active">
+      <div class="page-header">
+        <div><div class="page-title">My Journal Library</div><div class="page-subtitle">24 entries · April 2026</div></div>
+        <button class="btn-primary" onclick="showPage('new-entry',document.querySelectorAll('.nav-item')[1])">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+          New Entry
+        </button>
+      </div>
+      <div class="calendar-strip" id="calStrip"></div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3 3"/></svg>
+          <input class="search-input" placeholder="Search your entries..." id="searchInput" oninput="filterEntries()"/>
+        </div>
+        <div class="filter-chip active" onclick="setFilter('all',this)">All</div>
+        <div class="filter-chip" onclick="setFilter('great',this)">Great days</div>
+        <div class="filter-chip" onclick="setFilter('okay',this)">Okay days</div>
+        <div class="filter-chip" onclick="setFilter('hard',this)">Hard days</div>
+      </div>
+      <div class="entries-grid" id="entriesGrid"></div>
+    </div>
+
+    <!-- New Entry -->
+    <div id="page-new-entry" class="page">
+      <div class="new-entry-wrap">
+        <div style="margin-bottom:20px">
+          <div class="page-title">New Journal Entry</div>
+          <div class="page-subtitle">Write freely — everything stays on your device</div>
+        </div>
+        <div class="mode-tabs">
+          <div class="mode-tab active" onclick="switchMode('type',this)">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h11M2 7.5h7M2 11h9"/></svg>
+            Type Entry
+          </div>
+          <div class="mode-tab" onclick="switchMode('upload',this)">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="11" height="11" rx="2"/><circle cx="5.5" cy="5.5" r="1.5"/><path d="M2 10l3-3 2.5 2.5L10 7l3 3"/></svg>
+            Upload Photo
+          </div>
+        </div>
+
+        <!-- Type -->
+        <div class="type-tab-content active" id="mode-type">
+          <div class="entry-date-row">
+            <input class="date-input" type="date" id="entryDate"/>
+            <div class="mood-picker">
+              <span class="mood-picker-label">Feeling?</span>
+              <button class="mood-btn" onclick="selectMood(this,'great')" title="Great">🌿</button>
+              <button class="mood-btn" onclick="selectMood(this,'okay')" title="Okay">🌤</button>
+              <button class="mood-btn" onclick="selectMood(this,'hard')" title="Hard">🌧</button>
+              <button class="mood-btn" onclick="selectMood(this,'anxious')" title="Anxious">🍂</button>
+            </div>
+          </div>
+          <textarea class="journal-textarea" id="journalText" placeholder="Dear journal, today I…" oninput="updateCharCount()"></textarea>
+          <div class="char-count" id="charCount">0 words</div>
+          <div class="entry-actions">
+            <button class="btn-secondary">Save draft</button>
+            <button class="btn-primary" onclick="saveEntry()">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M2 7l3.5 3.5L12 3"/></svg>
+              Save &amp; Index
+            </button>
+          </div>
+        </div>
+
+        <!-- Upload -->
+        <div class="upload-tab-content" id="mode-upload">
+          <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()"
+               ondragover="event.preventDefault();this.classList.add('dragover')"
+               ondragleave="this.classList.remove('dragover')"
+               ondrop="handleDrop(event)">
+            <div class="drop-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#61A641" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            </div>
+            <div class="drop-title">Drop your journal photo here</div>
+            <div class="drop-sub">or click to browse</div>
+            <div class="drop-formats">.jpg · .png · .heic supported</div>
+          </div>
+          <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.heic" style="display:none" onchange="handleFileSelect(event)"/>
+          <div class="upload-preview" id="uploadPreview">
+            <div class="preview-thumb">📄</div>
+            <div class="preview-info">
+              <div class="preview-name" id="previewName"></div>
+              <div class="preview-size" id="previewSize"></div>
+              <div class="ocr-status" id="ocrStatus"></div>
+              <div class="processing-bar" id="procBar"><div class="processing-fill" id="procFill"></div></div>
+            </div>
+          </div>
+          <div class="entry-actions" id="uploadActions" style="display:none">
+            <button class="btn-secondary" onclick="resetUpload()">Cancel</button>
+            <button class="btn-primary" onclick="processUpload()">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+              Run OCR &amp; Index
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat -->
+    <div id="page-chat" class="page">
+      <div class="chat-wrap">
+        <div class="chat-header">
+          <div class="chat-avatar">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="white" stroke-width="1.5"><path d="M11 3C7 3 4 6 4 10c0 1.5.5 3 1.4 4.1L4 19l5-1.4A7 7 0 1011 3z"/></svg>
+          </div>
+          <div>
+            <div class="chat-title">Sage</div>
+            <div class="chat-sub">your private journal companion · 24 entries indexed</div>
+          </div>
+          <div class="online-dot"></div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="message ai">
+            <div class="msg-avatar ai">S</div>
+            <div class="msg-body">
+              <div class="msg-bubble">Hello! I'm Sage, your private journal companion. I've read through all your entries and I'm here to help you reflect, spot patterns, and celebrate your journey. Everything stays completely on your device — what's on your mind today?</div>
+              <div class="msg-time">Today, 3:15 PM</div>
+            </div>
+          </div>
+        </div>
+        <div class="suggested-prompts" id="suggestedPrompts">
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">When did I last feel proud?</div>
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">What stresses me most?</div>
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">Show me a happy memory</div>
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">What are my patterns?</div>
+        </div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrap">
+            <textarea class="chat-input" id="chatInput" placeholder="Ask anything about your journal…" rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+              oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendChat()">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2"><path d="M8 3v10M3 8l5-5 5 5"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Insights -->
+    <div id="page-insights" class="page">
+      <div class="insights-wrap">
+        <div style="margin-bottom:0">
+          <div class="page-title">Journal Insights</div>
+          <div class="page-subtitle">Patterns from your last 30 days</div>
+        </div>
+        <div class="insights-grid">
+          <div class="insight-card"><div class="insight-label">Total entries</div><div class="insight-value">24</div><div class="insight-sub">↑ 6 more than last month</div></div>
+          <div class="insight-card"><div class="insight-label">Writing streak</div><div class="insight-value">7 days</div><div class="insight-sub">Personal best: 12 days</div></div>
+          <div class="insight-card"><div class="insight-label">Avg. words / entry</div><div class="insight-value">214</div><div class="insight-sub">You're writing more lately</div></div>
+          <div class="insight-card"><div class="insight-label">Most active time</div><div class="insight-value">9 PM</div><div class="insight-sub">Evening reflection pattern</div></div>
+          <div class="insight-card full">
+            <div class="insight-label">Mood distribution</div>
+            <div style="margin-top:12px">
+              <div class="mood-bar-row"><div class="mood-bar-label">🌿 Great</div><div class="mood-bar-track"><div class="mood-bar-fill" style="width:45%;background:#61A641"></div></div><div class="mood-bar-num">11</div></div>
+              <div class="mood-bar-row"><div class="mood-bar-label">🌤 Okay</div><div class="mood-bar-track"><div class="mood-bar-fill" style="width:33%;background:#F2D16D"></div></div><div class="mood-bar-num">8</div></div>
+              <div class="mood-bar-row"><div class="mood-bar-label">🌧 Hard</div><div class="mood-bar-track"><div class="mood-bar-fill" style="width:17%;background:#d4896a"></div></div><div class="mood-bar-num">4</div></div>
+              <div class="mood-bar-row"><div class="mood-bar-label">🍂 Anxious</div><div class="mood-bar-track"><div class="mood-bar-fill" style="width:4%;background:#A6D98F"></div></div><div class="mood-bar-num">1</div></div>
+            </div>
+          </div>
+          <div class="insight-card full">
+            <div class="insight-label">Themes you write about most</div>
+            <div class="word-cloud">
+              <span class="word-tag big">work</span><span class="word-tag big">gratitude</span><span class="word-tag">family</span>
+              <span class="word-tag big">growth</span><span class="word-tag small">sleep</span><span class="word-tag">creativity</span>
+              <span class="word-tag small">anxiety</span><span class="word-tag">friends</span><span class="word-tag big">health</span>
+              <span class="word-tag small">goals</span><span class="word-tag">exercise</span><span class="word-tag small">reading</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const ENTRIES=[
+  {date:'Apr 13, 2026',mood:'great',preview:'Finished the Local Journal Buddy backend today. Wired up all four modules and the pipeline actually ran end to end. That moment when the LLM responded with something real... felt electric.',tags:['coding','win','proud'],words:214,source:'typed'},
+  {date:'Apr 11, 2026',mood:'okay',preview:'Called mom in the evening. She sounded tired but we laughed about the old kitchen disaster story again. Some conversations feel like a warm blanket.',tags:['family','gratitude'],words:178,source:'typed'},
+  {date:'Apr 9, 2026',mood:'hard',preview:"Couldn't focus all morning. The project felt too big and I kept starting things without finishing them. Took a walk at 4pm and things settled a little.",tags:['work','anxiety','walk'],words:192,source:'photo'},
+  {date:'Apr 7, 2026',mood:'great',preview:'Morning run felt effortless today. Three kilometres without stopping. Six months ago I could barely do one. Small wins compound into something real.',tags:['health','proud','running'],words:156,source:'typed'},
+  {date:'Apr 5, 2026',mood:'okay',preview:'Read half of Piranesi in the afternoon. That book does something strange to time — you look up and two hours are gone. Felt rested in a weird way.',tags:['reading','rest'],words:143,source:'typed'},
+  {date:'Apr 2, 2026',mood:'great',preview:"Team shipped the feature. Four weeks of iteration and it's finally out. The celebration call was short but felt genuine — everyone actually proud.",tags:['work','team','win'],words:221,source:'photo'},
+  {date:'Mar 31, 2026',mood:'hard',preview:"Slept badly for the third night. Keep waking around 3am with a low hum of worry. Nothing specific, just a sense that I'm forgetting something important.",tags:['sleep','anxiety'],words:168,source:'typed'},
+  {date:'Mar 28, 2026',mood:'great',preview:'Planted herbs on the balcony. Basil, mint, rosemary. Something grounding about putting seeds in soil and just trusting they\'ll grow with a little care.',tags:['home','calm','nature'],words:134,source:'typed'},
+];
+
+const QUOTES=[
+  {text:"The unexamined life is not worth living.",author:"— Socrates"},
+  {text:"In the middle of every difficulty lies opportunity.",author:"— Albert Einstein"},
+  {text:"You are allowed to be both a masterpiece and a work in progress.",author:"— Sophia Bush"},
+  {text:"What you seek is seeking you.",author:"— Rumi"},
+  {text:"Be gentle with yourself. You are a child of the universe.",author:"— Max Ehrmann"},
+  {text:"Not all those who wander are lost.",author:"— J.R.R. Tolkien"},
+  {text:"The only way out is through.",author:"— Robert Frost"},
+  {text:"Growth is never by mere chance; it is the result of forces working together.",author:"— James Cash Penney"},
+];
+
+const AI_RESPONSES={
+  "when did i last feel proud":"In your entry from April 13th, you wrote about finishing the backend pipeline — that genuine electric feeling when everything worked end to end. And before that, on April 7th, you celebrated running 3km without stopping. You've been marking your wins thoughtfully. That's something to feel good about.",
+  "what stresses me most":"Reading through your entries, work and sleep seem to be the most recurring themes when you're struggling. On March 31st you wrote about waking at 3am with a 'low hum of worry' — and on April 9th, the feeling of too many unfinished threads. Your walks seem to genuinely help. You've mentioned that a few times.",
+  "show me a happy memory":"One that stands out: April 2nd, when your team shipped the feature after four weeks of iteration. You wrote that the celebration felt 'short but genuine — everyone actually proud.' That shared pride in something built together sounds like it meant a lot to you.",
+  "what are my patterns":"A few patterns I notice: you tend to write most in the evenings, you bounce back from hard days within 1–2 entries, and nature keeps appearing — the run, the balcony herbs, the walk at 4pm. It seems like movement and small grounding rituals are part of how you recover.",
+};
+
+let activeFilter='all', isLoading=false, quoteInterval=null;
+
+// Set today's date
+document.getElementById('entryDate').value=new Date().toISOString().split('T')[0];
+
+function renderEntries(entries){
+  const grid=document.getElementById('entriesGrid');
+  if(!entries.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:#6b8a77;font-size:14px">No entries found</div>';return;}
+  grid.innerHTML=entries.map(e=>`
+    <div class="entry-card mood-${e.mood}" onclick="openEntry('${e.date}')">
+      <div class="entry-meta"><span class="entry-date">${e.date}</span><span class="mood-dot ${e.mood}"></span></div>
+      <div class="entry-preview">${e.preview}</div>
+      <div class="entry-tags">${e.tags.map(t=>`<span class="tag ${t==='proud'||t==='win'?'highlight':''}">${t}</span>`).join('')}</div>
+      <div class="entry-footer"><span class="entry-words">${e.words} words</span><span class="entry-source">${e.source==='photo'?'📷 photo':'✏️ typed'}</span></div>
+    </div>`).join('');
+}
+
+function filterEntries(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  renderEntries(ENTRIES.filter(e=>(activeFilter==='all'||e.mood===activeFilter)&&(e.preview.toLowerCase().includes(q)||e.tags.some(t=>t.includes(q))||e.date.toLowerCase().includes(q))));
+}
+
+function setFilter(f,el){activeFilter=f;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');filterEntries();}
+
+function openEntry(date){showPage('chat',document.querySelectorAll('.nav-item')[2]);setTimeout(()=>sendPromptText(`Tell me about my entry from ${date}`),300);}
+
+function buildCalendar(){
+  const strip=document.getElementById('calStrip');
+  const days=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const today=new Date();
+  const entryDays=new Set([13,11,9,7,5,2]);
+  let html='';
+  for(let i=13;i>=0;i--){
+    const d=new Date(today);d.setDate(today.getDate()-i);
+    const dn=d.getDate(),isToday=i===0,hasEntry=entryDays.has(dn);
+    html+=`<div class="cal-day ${isToday?'today':''} ${hasEntry&&!isToday?'has-entry':''}"><div class="cal-label">${days[d.getDay()]}</div><div class="cal-num">${dn}</div>${hasEntry?'<div class="cal-pip"></div>':''}</div>`;
+  }
+  strip.innerHTML=html;
+}
+
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  if(el)el.classList.add('active');
+}
+
+function switchMode(mode,el){
+  document.querySelectorAll('.mode-tab').forEach(t=>t.classList.remove('active'));el.classList.add('active');
+  document.getElementById('mode-type').classList.toggle('active',mode==='type');
+  document.getElementById('mode-upload').classList.toggle('active',mode==='upload');
+}
+
+let selectedMood=null;
+function selectMood(btn,mood){document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));btn.classList.add('selected');selectedMood=mood;}
+function updateCharCount(){const t=document.getElementById('journalText').value,w=t.trim()?t.trim().split(/\s+/).length:0;document.getElementById('charCount').textContent=w+(w===1?' word':' words');}
+
+function saveEntry(){
+  if(!document.getElementById('journalText').value.trim())return;
+  const btn=event.target;btn.textContent='✓ Saved & Indexed!';btn.style.background='#61A641';
+  setTimeout(()=>{btn.innerHTML='<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M2 7l3.5 3.5L12 3"/></svg> Save & Index';btn.style.background='';},2200);
+}
+
+function handleFileSelect(e){if(e.target.files[0])showPreview(e.target.files[0]);}
+function handleDrop(e){e.preventDefault();document.getElementById('dropZone').classList.remove('dragover');if(e.dataTransfer.files[0])showPreview(e.dataTransfer.files[0]);}
+function showPreview(file){
+  document.getElementById('previewName').textContent=file.name;
+  document.getElementById('previewSize').textContent=(file.size/1024/1024).toFixed(1)+' MB';
+  document.getElementById('uploadPreview').classList.add('show');
+  document.getElementById('uploadActions').style.display='flex';
+  document.getElementById('ocrStatus').innerHTML='';
+}
+function resetUpload(){document.getElementById('uploadPreview').classList.remove('show');document.getElementById('uploadActions').style.display='none';document.getElementById('fileInput').value='';}
+function processUpload(){
+  const bar=document.getElementById('procBar'),fill=document.getElementById('procFill'),status=document.getElementById('ocrStatus');
+  bar.classList.add('show');
+  const steps=[[10,'Running Apple Vision OCR…'],[40,'Correcting handwriting errors…'],[70,'Chunking & embedding text…'],[95,'Indexing into ChromaDB…'],[100,'✓ Entry indexed successfully!']];
+  let i=0;
+  const run=()=>{if(i>=steps.length)return;fill.style.width=steps[i][0]+'%';status.textContent=steps[i][1];status.style.color=steps[i][0]===100?'#61A641':'#365946';i++;if(i<steps.length)setTimeout(run,800);};
+  run();
+}
+
+function sendChat(){
+  const input=document.getElementById('chatInput'),text=input.value.trim();
+  if(!text||isLoading)return;
+  input.value='';input.style.height='auto';
+  document.getElementById('suggestedPrompts').style.display='none';
+  appendMessage('user',text);showLoading();
+  setTimeout(()=>{
+    hideLoading();
+    const key=Object.keys(AI_RESPONSES).find(k=>text.toLowerCase().includes(k));
+    appendMessage('ai',AI_RESPONSES[key]||"That's a thoughtful question. Based on your journal entries, I can see a person who reflects deeply and notices small moments. Would you like me to look for a specific theme or time period?",['Mar–Apr 2026']);
+  },3500+Math.random()*2000);
+}
+
+function sendPromptText(text){document.getElementById('chatInput').value=text;sendChat();}
+
+function appendMessage(role,text,sources){
+  const msgs=document.getElementById('chatMessages'),now=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const srcHtml=sources?`<div class="msg-sources">${sources.map(s=>`<span class="source-chip">📖 ${s}</span>`).join('')}</div>`:'';
+  msgs.innerHTML+=`<div class="message ${role}"><div class="msg-avatar ${role}">${role==='ai'?'S':'D'}</div><div class="msg-body"><div class="msg-bubble">${text}</div>${srcHtml}<div class="msg-time">${now}</div></div></div>`;
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function showLoading(){
+  isLoading=true;document.getElementById('sendBtn').disabled=true;
+  let qi=Math.floor(Math.random()*QUOTES.length);
+  const msgs=document.getElementById('chatMessages');
+  msgs.innerHTML+=`<div class="loading-msg" id="loadingMsg"><div class="quote-card"><svg class="quote-floral" width="80" height="80" viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="35" fill="#365946"/><circle cx="40" cy="20" r="12" fill="#61A641"/><circle cx="56" cy="30" r="10" fill="#A6D98F"/><circle cx="56" cy="50" r="10" fill="#A6D98F"/><circle cx="40" cy="60" r="12" fill="#61A641"/><circle cx="24" cy="50" r="10" fill="#A6D98F"/><circle cx="24" cy="30" r="10" fill="#A6D98F"/><circle cx="40" cy="40" r="8" fill="#F2D16D"/></svg><div class="quote-text" id="quoteText">${QUOTES[qi].text}</div><div class="quote-author" id="quoteAuthor">${QUOTES[qi].author}</div><div class="quote-loading-dots"><div class="q-dot"></div><div class="q-dot"></div><div class="q-dot"></div></div></div></div>`;
+  msgs.scrollTop=msgs.scrollHeight;
+  quoteInterval=setInterval(()=>{
+    qi=(qi+1)%QUOTES.length;
+    const qt=document.getElementById('quoteText'),qa=document.getElementById('quoteAuthor');
+    if(qt&&qa){qt.classList.remove('quote-fade');void qt.offsetWidth;qt.textContent=QUOTES[qi].text;qa.textContent=QUOTES[qi].author;qt.classList.add('quote-fade');}
+  },3000);
+}
+
+function hideLoading(){
+  isLoading=false;clearInterval(quoteInterval);
+  const lm=document.getElementById('loadingMsg');if(lm)lm.remove();
+  document.getElementById('sendBtn').disabled=false;
+}
+
+renderEntries(ENTRIES);
+buildCalendar();
+</script>
+</body>
+</html>

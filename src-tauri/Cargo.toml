@@ -1,0 +1,42 @@
+[package]
+name = "journal-buddy"
+version = "1.0.0"
+description = "Local Journal Buddy — 100% offline private mental health companion"
+authors = ["you"]
+edition = "2021"
+
+[lib]
+name = "journal_buddy_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "journal-buddy"
+path = "src/main.rs"
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-build = { version = "2.0", optional = true }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+reqwest = { version = "0.12", features = ["json"], default-features = false }
+tauri-plugin-shell = "2.0"
+walkdir = "2.5"
+chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
+rfd = "0.15"
+
+[features]
+default = ["tauri/rustls-tls"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(mobile)'] }

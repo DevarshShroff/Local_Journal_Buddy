@@ -1,0 +1,1517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Journal Buddy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --forest:#365946;--leaf:#61A641;--sage:#A6D98F;--sun:#F2D16D;--cream:#F2F2F2;
+  --forest-light:#4a7a60;--forest-dark:#243d31;--ink:#1e2e25;--muted:#6b8a77;
+  --surface:#f7faf8;--error:#c0392b;
+}
+html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--ink);overflow:hidden}
+.app{display:flex;height:100vh}
+
+/* ── Sidebar ── */
+.sidebar{width:220px;min-width:220px;background:var(--forest);display:flex;flex-direction:column;position:relative;overflow:hidden}
+.sidebar-floral{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:.12}
+.sidebar-top{padding:28px 20px 20px;border-bottom:1px solid rgba(255,255,255,.1);position:relative;z-index:1}
+.app-name{font-family:'Lora',serif;color:#F2F2F2;font-size:17px;font-weight:500;line-height:1.3}
+.app-tagline{font-size:11px;color:var(--sage);margin-top:4px;opacity:.8}
+.nav{padding:16px 12px;flex:1;position:relative;z-index:1}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:rgba(242,242,242,.65);font-size:13.5px;transition:all .18s;margin-bottom:2px;user-select:none}
+.nav-item:hover{background:rgba(255,255,255,.08);color:#F2F2F2}
+.nav-item.active{background:rgba(166,217,143,.2);color:var(--sage)}
+.nav-icon{width:18px;height:18px;flex-shrink:0}
+.sidebar-bottom{padding:16px 20px;border-top:1px solid rgba(255,255,255,.1);position:relative;z-index:1}
+.streak-badge{background:rgba(242,209,109,.15);border:1px solid rgba(242,209,109,.3);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px}
+.streak-num{color:var(--sun);font-size:18px;font-weight:500;font-family:'Lora',serif}
+.streak-label{color:rgba(242,242,242,.6);font-size:11px;line-height:1.3}
+
+/* ── Main ── */
+.main{flex:1;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+.page{display:none;flex:1;overflow-y:auto;flex-direction:column}
+.page.active{display:flex}
+
+/* ── Onboarding / Health check ── */
+.onboarding{position:fixed;inset:0;background:rgba(30,46,37,.92);z-index:1000;display:flex;align-items:center;justify-content:center}
+.onboarding.hidden{display:none}
+.onboard-card{background:white;border-radius:20px;padding:36px 40px;max-width:480px;width:90%}
+.onboard-title{font-family:'Lora',serif;font-size:22px;color:var(--forest-dark);margin-bottom:6px}
+.onboard-sub{font-size:13.5px;color:var(--muted);margin-bottom:28px;line-height:1.6}
+.check-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f0f4f2}
+.check-row:last-of-type{border-bottom:none}
+.check-icon{width:28px;height:28px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+.check-icon.ok{background:rgba(97,166,65,.12);color:var(--leaf)}
+.check-icon.fail{background:rgba(192,57,43,.1);color:var(--error)}
+.check-icon.loading{background:rgba(97,166,65,.08);color:var(--muted);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.check-label{font-size:13.5px;color:var(--ink);flex:1}
+.check-detail{font-size:12px;color:var(--muted)}
+.onboard-error{background:#fdf2f2;border:1px solid #f5c6c6;border-radius:10px;padding:12px 16px;font-size:12.5px;color:var(--error);margin-top:16px;line-height:1.6}
+.onboard-actions{display:flex;gap:10px;margin-top:24px;justify-content:flex-end}
+
+/* ── Buttons ── */
+.btn{border-radius:10px;padding:9px 18px;font-size:13px;font-family:'DM Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:all .15s;border:none;white-space:nowrap}
+.btn-primary{background:var(--forest);color:#F2F2F2}
+.btn-primary:hover{background:var(--forest-light)}
+.btn-primary:disabled{background:#c5d9cd;cursor:not-allowed}
+.btn-secondary{background:transparent;color:var(--forest);border:1.5px solid var(--forest)}
+.btn-secondary:hover{background:var(--forest);color:white}
+.btn-danger{background:transparent;color:var(--error);border:1.5px solid var(--error)}
+.btn-danger:hover{background:var(--error);color:white}
+
+/* ── Page header ── */
+.page-header{padding:28px 32px 0;display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0}
+.page-title{font-family:'Lora',serif;font-size:24px;font-weight:500;color:var(--forest-dark)}
+.page-subtitle{font-size:13px;color:var(--muted);margin-top:3px}
+
+/* ── Toolbar ── */
+.toolbar{padding:16px 32px;display:flex;gap:12px;align-items:center;flex-shrink:0}
+.search-wrap{flex:1;position:relative}
+.search-input{width:100%;background:white;border:1.5px solid #e2ede7;border-radius:10px;padding:9px 14px 9px 38px;font-size:13.5px;color:var(--ink);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
+.search-input:focus{border-color:var(--leaf)}
+.search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+.filter-chip{background:white;border:1.5px solid #e2ede7;border-radius:20px;padding:6px 14px;font-size:12.5px;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
+.filter-chip.active{background:var(--forest);color:white;border-color:var(--forest)}
+.filter-chip:hover:not(.active){border-color:var(--leaf);color:var(--forest)}
+
+/* ── Calendar strip ── */
+.calendar-strip{padding:0 32px 8px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.calendar-strip::-webkit-scrollbar{display:none}
+.cal-day{flex-shrink:0;width:44px;background:white;border:1.5px solid #e8f0eb;border-radius:10px;padding:8px 4px;text-align:center;cursor:pointer;transition:all .15s}
+.cal-day:hover,.cal-day.has-entry{border-color:var(--sage)}
+.cal-day.today{background:var(--forest);border-color:var(--forest)}
+.cal-day .cal-num{font-size:14px;font-weight:500;color:var(--ink)}
+.cal-day .cal-lbl{font-size:10px;color:var(--muted);margin-top:1px}
+.cal-day.today .cal-num,.cal-day.today .cal-lbl{color:white}
+.cal-pip{width:5px;height:5px;border-radius:50%;background:var(--leaf);margin:4px auto 0}
+.cal-day.today .cal-pip{background:var(--sage)}
+
+/* ── Entry grid ── */
+.entries-grid{padding:8px 32px 32px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.entry-card{background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:18px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
+.entry-card:hover{border-color:var(--sage);transform:translateY(-2px);box-shadow:0 4px 16px rgba(54,89,70,.1)}
+.entry-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
+.entry-card.mood-great::before{background:var(--leaf)}
+.entry-card.mood-okay::before{background:var(--sun)}
+.entry-card.mood-hard::before{background:#d4896a}
+.entry-card.mood-anxious::before{background:var(--sage)}
+.entry-delete{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:9px;border:1.5px solid #e8ebe9;background:rgba(255,255,255,.96);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;line-height:1;transition:all .15s;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.entry-delete:hover{background:#fff8f7;border-color:rgba(192,57,43,.35);color:var(--error)}
+.entry-delete:active{transform:scale(.96)}
+.entry-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-right:40px}
+.entry-date{font-size:12px;color:var(--muted)}
+.mood-dot{width:8px;height:8px;border-radius:50%}
+.mood-dot.great{background:var(--leaf)}.mood-dot.okay{background:var(--sun)}.mood-dot.hard{background:#d4896a}.mood-dot.anxious{background:var(--sage)}
+.entry-preview{font-family:'Lora',serif;font-size:14px;line-height:1.6;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.entry-tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.tag{background:var(--cream);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--muted)}
+.entry-footer{margin-top:14px;display:flex;align-items:center;justify-content:space-between}
+.entry-words{font-size:11px;color:var(--muted)}
+.entry-source{font-size:10.5px;color:var(--muted);background:var(--cream);border-radius:5px;padding:2px 7px}
+.empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-icon{font-size:36px;margin-bottom:12px}
+.empty-title{font-family:'Lora',serif;font-size:17px;color:var(--forest-dark);margin-bottom:6px}
+.empty-sub{font-size:13px}
+
+/* ── Entry reader modal ── */
+.entry-view-modal{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+.entry-view-modal.hidden{display:none!important}
+.entry-view-backdrop{position:absolute;inset:0;background:rgba(30,46,37,.52);backdrop-filter:blur(5px)}
+.entry-view-panel{position:relative;background:white;border-radius:18px;max-width:680px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.2);border:1.5px solid #e2ede7}
+.entry-view-head{padding:18px 20px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:14px;border-bottom:1px solid #eef4f0;flex-shrink:0}
+.entry-view-title{font-family:'Lora',serif;font-size:20px;color:var(--forest-dark);line-height:1.25}
+.entry-view-meta{font-size:12.5px;color:var(--muted);margin-top:5px}
+.entry-view-close{width:38px;height:38px;border:none;background:var(--cream);border-radius:10px;cursor:pointer;font-size:24px;line-height:1;color:var(--muted);flex-shrink:0;transition:background .15s,color .15s}
+.entry-view-close:hover{background:#e8ebe9;color:var(--forest-dark)}
+.entry-view-body{flex:1;overflow-y:auto;padding:18px 22px;font-family:'Lora',serif;font-size:14.5px;line-height:1.75;color:var(--ink);white-space:pre-wrap;min-height:120px}
+.entry-view-actions{padding:14px 20px 18px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;border-top:1px solid #eef4f0;background:#fafcfb;border-radius:0 0 17px 17px;flex-shrink:0}
+
+/* ── New Entry ── */
+.new-entry-wrap{padding:28px 32px;display:flex;flex-direction:column;flex:1;gap:0}
+.mode-tabs{display:flex;gap:8px;margin-bottom:24px}
+.mode-tab{padding:8px 18px;border-radius:10px;border:1.5px solid #e2ede7;background:white;font-size:13px;cursor:pointer;color:var(--muted);font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:7px;transition:all .15s}
+.mode-tab.active{background:var(--forest);color:white;border-color:var(--forest)}
+.mode-tab:hover:not(.active){border-color:var(--forest);color:var(--forest)}
+.tab-content{display:none;flex-direction:column;gap:16px;flex:1}
+.tab-content.active{display:flex}
+.date-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.date-input{background:white;border:1.5px solid #e2ede7;border-radius:10px;padding:8px 14px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none}
+.date-input:focus{border-color:var(--leaf)}
+.mood-row{display:flex;gap:8px;align-items:center}
+.mood-lbl{font-size:13px;color:var(--muted)}
+.mood-btn{width:34px;height:34px;border-radius:8px;border:1.5px solid #e2ede7;background:white;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.mood-btn:hover,.mood-btn.selected{border-color:var(--leaf);background:rgba(97,166,65,.08);transform:scale(1.1)}
+.journal-ta{flex:1;background:white;border:1.5px solid #e2ede7;border-radius:14px;padding:20px 24px;font-family:'Lora',serif;font-size:15px;line-height:1.8;color:var(--ink);resize:none;outline:none;min-height:240px;transition:border-color .15s}
+.journal-ta:focus{border-color:var(--sage)}
+.journal-ta::placeholder{color:#c0cfc7;font-style:italic}
+.char-count{font-size:11.5px;color:var(--muted);text-align:right}
+.entry-actions{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+.drop-zone{border:2.5px dashed var(--sage);border-radius:16px;background:rgba(166,217,143,.05);padding:48px 32px;text-align:center;cursor:pointer;transition:all .2s}
+.drop-zone:hover,.drop-zone.over{background:rgba(166,217,143,.12);border-color:var(--leaf)}
+.drop-icon{width:52px;height:52px;background:rgba(97,166,65,.1);border-radius:50%;margin:0 auto 14px;display:flex;align-items:center;justify-content:center}
+.drop-title{font-size:15px;font-weight:500;color:var(--forest);margin-bottom:6px}
+.drop-sub{font-size:13px;color:var(--muted)}
+.drop-fmts{margin-top:8px;font-size:12px;color:var(--muted);opacity:.7}
+.upload-preview{display:none;background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:16px;gap:14px;align-items:flex-start}
+.upload-preview.show{display:flex}
+.preview-thumb{width:56px;height:56px;border-radius:8px;background:var(--cream);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px}
+.preview-info{flex:1;min-width:0}
+.preview-name{font-size:13.5px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.preview-sz{font-size:12px;color:var(--muted);margin-top:2px}
+.ocr-status{margin-top:6px;font-size:12px;color:var(--forest)}
+.proc-bar{display:none;background:#e8f0eb;border-radius:4px;height:4px;overflow:hidden;margin-top:8px}
+.proc-bar.show{display:block}
+.proc-fill{height:100%;background:linear-gradient(90deg,var(--leaf),var(--sage));border-radius:4px;width:0%;transition:width .4s}
+
+/* ── Batch ingest ── */
+.batch-zone{border:2.5px dashed #c8ddd1;border-radius:16px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:white}
+.batch-zone:hover{border-color:var(--sage);background:rgba(166,217,143,.04)}
+.batch-progress-wrap{display:none;background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:20px}
+.batch-progress-wrap.show{display:block}
+.batch-file{font-size:13px;color:var(--ink);margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.batch-count{font-size:12px;color:var(--muted);margin-bottom:10px}
+.batch-bar-track{background:#e8f0eb;border-radius:4px;height:6px;overflow:hidden}
+.batch-bar-fill{height:100%;background:var(--leaf);border-radius:4px;width:0%;transition:width .3s}
+.batch-results{margin-top:14px;max-height:160px;overflow-y:auto}
+.batch-result-row{display:flex;align-items:center;gap:8px;font-size:12px;padding:3px 0;color:var(--muted)}
+.batch-result-row .ok{color:var(--leaf)}.batch-result-row .err{color:var(--error)}
+
+/* ── Chat ── */
+.chat-wrap{display:flex;flex-direction:column;height:100%;overflow:hidden}
+.chat-header{padding:20px 28px;border-bottom:1px solid #e8f0eb;background:white;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.chat-avatar{width:40px;height:40px;background:var(--forest);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.chat-title{font-family:'Lora',serif;font-size:16px;font-weight:500;color:var(--forest-dark)}
+.chat-sub{font-size:12px;color:var(--muted);margin-top:2px}
+.online-dot{width:8px;height:8px;background:var(--leaf);border-radius:50%;margin-left:auto;flex-shrink:0}
+.chat-messages{flex:1;overflow-y:auto;padding:24px 28px;display:flex;flex-direction:column;gap:18px;background:var(--surface)}
+.message{display:flex;gap:10px;max-width:82%;animation:fadeUp .22s ease}
+.message.user{align-self:flex-end;flex-direction:row-reverse}
+.msg-avatar{width:32px;height:32px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500}
+.msg-avatar.ai{background:var(--forest);color:white}
+.msg-avatar.user{background:var(--sun);color:var(--forest-dark)}
+.msg-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.msg-bubble{padding:12px 16px;border-radius:14px;font-size:14px;line-height:1.65;word-wrap:break-word}
+.message.ai .msg-bubble{background:white;border:1px solid #e8f0eb;color:var(--ink);border-radius:4px 14px 14px 14px}
+.message.user .msg-bubble{background:var(--forest);color:white;border-radius:14px 4px 14px 14px}
+.msg-time{font-size:11px;color:var(--muted)}
+.message.user .msg-time{text-align:right}
+.msg-sources{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.source-chip{background:rgba(97,166,65,.1);border:1px solid rgba(97,166,65,.2);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--forest)}
+.loading-msg{align-self:center;text-align:center;padding:16px}
+.quote-card{background:white;border:1.5px solid #e8f0eb;border-radius:16px;padding:20px 24px;max-width:360px;position:relative;overflow:hidden}
+.quote-floral{position:absolute;right:-8px;bottom:-8px;opacity:.07;pointer-events:none}
+.quote-text{font-family:'Lora',serif;font-style:italic;font-size:14px;line-height:1.7;color:var(--forest-dark);position:relative;z-index:1}
+.quote-author{font-size:12px;color:var(--muted);margin-top:8px}
+.q-dots{display:flex;gap:5px;justify-content:center;margin-top:12px}
+.q-dot{width:6px;height:6px;border-radius:50%;background:var(--sage);animation:qdot 1.2s infinite}
+.q-dot:nth-child(2){animation-delay:.2s}.q-dot:nth-child(3){animation-delay:.4s}
+.suggested-prompts{padding:12px 28px 8px;display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.prompt-chip{background:white;border:1.5px solid #e2ede7;border-radius:20px;padding:7px 14px;font-size:12.5px;cursor:pointer;color:var(--forest);transition:all .15s;font-family:'DM Sans',sans-serif}
+.prompt-chip:hover{background:var(--forest);color:white;border-color:var(--forest)}
+.chat-input-area{padding:14px 28px 18px;background:white;border-top:1px solid #e8f0eb;flex-shrink:0}
+.chat-input-wrap{display:flex;gap:10px;align-items:flex-end;background:var(--surface);border:1.5px solid #e2ede7;border-radius:14px;padding:10px 10px 10px 16px;transition:border-color .15s}
+.chat-input-wrap:focus-within{border-color:var(--sage)}
+.chat-input{flex:1;background:transparent;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--ink);resize:none;max-height:100px;line-height:1.5}
+.chat-input::placeholder{color:#b8ccc2}
+.send-btn{width:36px;height:36px;background:var(--forest);border:none;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s}
+.send-btn:hover{background:var(--forest-light)}
+.send-btn:disabled{background:#c5d9cd;cursor:not-allowed}
+
+/* ── Insights ── */
+.insights-wrap{padding:28px 32px;overflow-y:auto;flex:1}
+.insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.i-card{background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:18px}
+.i-card.full{grid-column:1/-1}
+.i-label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.i-value{font-family:'Lora',serif;font-size:28px;color:var(--forest-dark)}
+.i-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.mood-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.mood-bar-lbl{font-size:13px;color:var(--ink);width:72px;flex-shrink:0}
+.mood-bar-track{flex:1;background:var(--cream);border-radius:4px;height:8px;overflow:hidden}
+.mood-bar-fill{height:100%;border-radius:4px}
+.mood-bar-num{font-size:12px;color:var(--muted);width:28px;text-align:right;flex-shrink:0}
+.word-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.w-tag{background:rgba(97,166,65,.08);border-radius:8px;padding:5px 12px;font-size:13px;color:var(--forest);border:1px solid rgba(97,166,65,.15)}
+.w-tag.big{font-size:15px;background:rgba(97,166,65,.13)}
+.w-tag.sm{font-size:11px;opacity:.75}
+
+/* ── Notifications ── */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--forest-dark);color:white;border-radius:12px;padding:12px 18px;font-size:13px;z-index:2000;animation:fadeUp .25s ease;max-width:320px}
+.toast.error{background:var(--error)}
+.toast.success{background:var(--forest)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes qdot{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
+@keyframes qfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.qfade{animation:qfade .4s ease}
+</style>
+</head>
+<body>
+
+<!-- ── First Launch Health Check ── -->
+<div id="onboarding" class="onboarding">
+  <div class="onboard-card">
+    <div class="onboard-title">📓 Journal Buddy</div>
+    <div class="onboard-sub">Checking your local setup before we begin…<br>Everything runs on your Mac — nothing leaves your device.</div>
+
+    <div class="check-row" id="chk-python">
+      <div class="check-icon loading" id="chk-python-icon">↻</div>
+      <div>
+        <div class="check-label">Python environment</div>
+        <div class="check-detail" id="chk-python-detail">Checking…</div>
+      </div>
+    </div>
+    <div class="check-row" id="chk-ollama">
+      <div class="check-icon loading" id="chk-ollama-icon">↻</div>
+      <div>
+        <div class="check-label">Ollama server</div>
+        <div class="check-detail" id="chk-ollama-detail">Checking…</div>
+      </div>
+    </div>
+    <div class="check-row" id="chk-model">
+      <div class="check-icon loading" id="chk-model-icon">↻</div>
+      <div>
+        <div class="check-label">Llama3:8b model</div>
+        <div class="check-detail" id="chk-model-detail">Checking…</div>
+      </div>
+    </div>
+    <div class="check-row" id="chk-db">
+      <div class="check-icon loading" id="chk-db-icon">↻</div>
+      <div>
+        <div class="check-label">Journal database</div>
+        <div class="check-detail" id="chk-db-detail">Checking…</div>
+      </div>
+    </div>
+
+    <div id="onboard-errors" class="onboard-error" style="display:none"></div>
+    <div id="onboard-debug" class="onboard-error" style="display:none;background:#f6f9ff;border-color:#c8d8ff;color:#2d3b63"></div>
+
+    <div class="onboard-actions">
+      <button class="btn btn-secondary" onclick="skipOnboarding()">Skip for now</button>
+      <button class="btn btn-primary" id="onboard-continue" onclick="finishOnboarding()" disabled>Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── App Shell ── -->
+<div class="app">
+  <nav class="sidebar">
+    <svg class="sidebar-floral" viewBox="0 0 220 600" fill="none">
+      <circle cx="180" cy="80" r="55" fill="white"/><circle cx="160" cy="55" r="30" fill="white"/>
+      <circle cx="200" cy="110" r="25" fill="white"/><circle cx="30" cy="480" r="65" fill="white"/>
+      <circle cx="10" cy="510" r="35" fill="white"/><circle cx="60" cy="500" r="28" fill="white"/>
+      <path d="M150 200 Q170 170 190 200 Q170 230 150 200Z" fill="white"/>
+      <path d="M20 350 Q40 320 60 350 Q40 380 20 350Z" fill="white"/>
+    </svg>
+    <div class="sidebar-top">
+      <div class="app-name">📓 Journal Buddy</div>
+      <div class="app-tagline">your private second brain</div>
+    </div>
+    <div class="nav">
+      <div class="nav-item active" onclick="showPage('library',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="6" height="8" rx="1.5"/><rect x="11" y="3" width="6" height="5" rx="1.5"/><rect x="11" y="10" width="6" height="7" rx="1.5"/><rect x="3" y="13" width="6" height="4" rx="1.5"/></svg>
+        Library
+      </div>
+      <div class="nav-item" onclick="showPage('new-entry',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 4v12M4 10h12"/></svg>
+        New Entry
+      </div>
+      <div class="nav-item" onclick="showPage('batch',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h12M4 10h12M4 14h8"/><circle cx="16" cy="14" r="3"/><path d="M16 12.5v1.5l1 1"/></svg>
+        Batch Import
+      </div>
+      <div class="nav-item" onclick="showPage('chat',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 6h12M4 10h8"/><circle cx="15" cy="14" r="3"/></svg>
+        Chat with Journal
+      </div>
+      <div class="nav-item" onclick="showPage('insights',this)">
+        <svg class="nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 14l4-4 3 3 5-6"/></svg>
+        Insights
+      </div>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="streak-badge">
+        <div class="streak-num" id="streakNum">—</div>
+        <div class="streak-label">day streak<br>keep going!</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main">
+
+    <!-- ── Library ── -->
+    <div id="page-library" class="page active">
+      <div class="page-header">
+        <div>
+          <div class="page-title">My Journal Library</div>
+          <div class="page-subtitle" id="library-subtitle">Loading entries…</div>
+        </div>
+        <button class="btn btn-primary" onclick="showPage('new-entry',document.querySelectorAll('.nav-item')[1])">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+          New Entry
+        </button>
+      </div>
+      <div class="calendar-strip" id="calStrip"></div>
+      <div class="toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3 3"/></svg>
+          <input class="search-input" placeholder="Search entries…" id="searchInput" oninput="filterEntries()"/>
+        </div>
+        <div class="filter-chip active" onclick="setFilter('all',this)">All</div>
+        <div class="filter-chip" onclick="setFilter('great',this)">Great</div>
+        <div class="filter-chip" onclick="setFilter('okay',this)">Okay</div>
+        <div class="filter-chip" onclick="setFilter('hard',this)">Hard</div>
+      </div>
+      <div class="entries-grid" id="entriesGrid">
+        <div class="empty-state">
+          <div class="empty-icon">🌱</div>
+          <div class="empty-title">Your library is empty</div>
+          <div class="empty-sub">Add your first journal entry to get started</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── New Entry ── -->
+    <div id="page-new-entry" class="page">
+      <div class="new-entry-wrap">
+        <div style="margin-bottom:20px;flex-shrink:0">
+          <div class="page-title">New Journal Entry</div>
+          <div class="page-subtitle">Write freely — everything stays on your device</div>
+        </div>
+        <div class="mode-tabs" style="flex-shrink:0">
+          <div class="mode-tab active" onclick="switchMode('type',this)">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h11M2 7.5h7M2 11h9"/></svg>
+            Type Entry
+          </div>
+          <div class="mode-tab" onclick="switchMode('upload',this)">
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="11" height="11" rx="2"/><circle cx="5.5" cy="5.5" r="1.5"/><path d="M2 10l3-3 2.5 2.5L10 7l3 3"/></svg>
+            Upload Photo
+          </div>
+        </div>
+
+        <!-- Type tab -->
+        <div class="tab-content active" id="mode-type">
+          <div class="date-row">
+            <input class="date-input" type="date" id="entryDate"/>
+            <div class="mood-row">
+              <span class="mood-lbl">Feeling?</span>
+              <button class="mood-btn" onclick="selectMood(this,'great')" title="Great">🌿</button>
+              <button class="mood-btn" onclick="selectMood(this,'okay')" title="Okay">🌤</button>
+              <button class="mood-btn" onclick="selectMood(this,'hard')" title="Hard">🌧</button>
+              <button class="mood-btn" onclick="selectMood(this,'anxious')" title="Anxious">🍂</button>
+            </div>
+          </div>
+          <textarea class="journal-ta" id="journalText" placeholder="Dear journal, today I…" oninput="updateWordCount()"></textarea>
+          <div class="char-count" id="wordCount">0 words</div>
+          <div class="entry-actions">
+            <button class="btn btn-secondary" onclick="clearEntry()">Clear</button>
+            <button class="btn btn-primary" id="saveBtn" onclick="saveTypedEntry()">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M2 7l3.5 3.5L12 3"/></svg>
+              Save &amp; Index
+            </button>
+          </div>
+        </div>
+
+        <!-- Upload tab -->
+        <div class="tab-content" id="mode-upload">
+          <div class="drop-zone" id="dropZone"
+               onclick="document.getElementById('fileInput').click()"
+               ondragover="event.preventDefault();this.classList.add('over')"
+               ondragleave="this.classList.remove('over')"
+               ondrop="handleDrop(event)">
+            <div class="drop-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#61A641" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            </div>
+            <div class="drop-title">Drop your journal photo here</div>
+            <div class="drop-sub">or click to browse</div>
+            <div class="drop-fmts">.jpg · .png · .heic supported</div>
+          </div>
+          <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.heic" style="display:none" onchange="handleFileSelect(event)"/>
+          <div class="upload-preview" id="uploadPreview">
+            <div class="preview-thumb">📄</div>
+            <div class="preview-info">
+              <div class="preview-name" id="previewName"></div>
+              <div class="preview-sz" id="previewSz"></div>
+              <div class="ocr-status" id="ocrStatus"></div>
+              <div class="proc-bar" id="procBar"><div class="proc-fill" id="procFill"></div></div>
+            </div>
+          </div>
+          <div class="entry-actions" id="uploadActions" style="display:none">
+            <button class="btn btn-secondary" onclick="resetUpload()">Cancel</button>
+            <button class="btn btn-primary" id="ocrBtn" onclick="runOCR()">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M7 2v10M2 7h10"/></svg>
+              Run OCR &amp; Index
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Batch Import ── -->
+    <div id="page-batch" class="page">
+      <div style="padding:28px 32px;display:flex;flex-direction:column;flex:1;gap:20px">
+        <div>
+          <div class="page-title">Batch Import</div>
+          <div class="page-subtitle">Import a whole folder of journal photos at once</div>
+        </div>
+        <div style="background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:14px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:6px;min-width:240px">
+            <div style="font-size:12.5px;color:var(--muted)">Date assignment</div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink);cursor:pointer">
+                <input type="radio" name="batchDateMode" id="batchDateFile" checked/>
+                Use each file’s modified date
+              </label>
+              <label style="display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink);cursor:pointer">
+                <input type="radio" name="batchDateMode" id="batchDateDefault"/>
+                Use this date for all
+              </label>
+              <input class="date-input" type="date" id="batchDefaultDate" style="margin-left:auto" />
+            </div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.5">
+              Tip: If your files were copied recently, “modified date” may be today. In that case, choose a default date.
+            </div>
+          </div>
+        </div>
+        <div class="batch-zone" id="batchZone"
+             onclick="batchZoneClick(event)"
+             ondragover="event.preventDefault();this.classList.add('over')"
+             ondragleave="this.classList.remove('over')"
+             ondrop="handleBatchDrop(event)">
+          <div style="font-size:32px;margin-bottom:12px">📁</div>
+          <div style="font-size:15px;font-weight:500;color:var(--forest);margin-bottom:6px">Select a folder of journal photos</div>
+          <div style="font-size:13px;color:var(--muted)">All .jpg, .png, .heic files will be OCR'd and indexed</div>
+          <div id="batchFolderHint" style="font-size:12px;color:var(--muted);margin-top:8px;opacity:.7;line-height:1.45">Perfect for onboarding years of handwritten journals</div>
+          <button type="button" class="btn btn-primary" id="batchNativePickBtn" style="display:none;margin-top:14px">Choose folder…</button>
+        </div>
+        <input type="file" id="folderInput" webkitdirectory multiple accept=".jpg,.jpeg,.png,.heic" style="display:none" onchange="handleFolderSelect(event)"/>
+
+        <div class="batch-progress-wrap" id="batchProgress">
+          <div class="batch-file" id="batchCurrentFile">—</div>
+          <div class="batch-count" id="batchCount">0 / 0 files</div>
+          <div class="batch-bar-track"><div class="batch-bar-fill" id="batchFill"></div></div>
+          <div class="batch-results" id="batchResults"></div>
+        </div>
+
+        <div style="background:#f0f8f4;border-radius:12px;padding:16px 20px">
+          <div style="font-size:13px;font-weight:500;color:var(--forest);margin-bottom:6px">How batch import works</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7">
+            1. Each photo is passed through Apple Vision OCR<br>
+            2. Handwriting errors are corrected automatically<br>
+            3. Text is split into 500-char chunks and embedded<br>
+            4. Everything is stored in your local ChromaDB<br>
+            5. Large collections (100+ pages) may take 10–20 minutes
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Chat ── -->
+    <div id="page-chat" class="page">
+      <div class="chat-wrap">
+        <div class="chat-header">
+          <div class="chat-avatar">
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="white" stroke-width="1.5"><path d="M11 3C7 3 4 6 4 10c0 1.5.5 3 1.4 4.1L4 19l5-1.4A7 7 0 1011 3z"/></svg>
+          </div>
+          <div>
+            <div class="chat-title">Sage</div>
+            <div class="chat-sub" id="chat-sub">your private journal companion</div>
+          </div>
+          <div class="online-dot" id="onlineDot" style="background:#c5d9cd"></div>
+        </div>
+        <div class="chat-messages" id="chatMessages">
+          <div class="message ai">
+            <div class="msg-avatar ai">S</div>
+            <div class="msg-body">
+              <div class="msg-bubble">Hello! I'm Sage, your private journal companion. I've read through all your entries and I'm here to help you reflect, spot patterns, and celebrate your journey. Everything stays completely on your device — what's on your mind today?</div>
+              <div class="msg-time" id="welcomeTime"></div>
+            </div>
+          </div>
+        </div>
+        <div class="suggested-prompts" id="suggestedPrompts">
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">When did I last feel proud?</div>
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">What stresses me most?</div>
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">Show me a happy memory</div>
+          <div class="prompt-chip" onclick="sendPromptText(this.textContent)">What patterns do you see?</div>
+        </div>
+        <div class="chat-input-area">
+          <div class="chat-input-wrap">
+            <textarea class="chat-input" id="chatInput" placeholder="Ask anything about your journal…" rows="1"
+              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"
+              oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+            <button class="send-btn" id="sendBtn" onclick="sendChat()">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="white" stroke-width="2"><path d="M8 3v10M3 8l5-5 5 5"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Insights ── -->
+    <div id="page-insights" class="page">
+      <div class="insights-wrap">
+        <div class="page-title">Journal Insights</div>
+        <div class="page-subtitle">Patterns from your entries</div>
+        <div class="insights-grid" id="insightsGrid">
+          <div class="i-card"><div class="i-label">Total entries</div><div class="i-value" id="ins-total">—</div><div class="i-sub" id="ins-total-sub"></div></div>
+          <div class="i-card"><div class="i-label">Writing streak</div><div class="i-value" id="ins-streak">—</div><div class="i-sub">days in a row</div></div>
+          <div class="i-card full">
+            <div class="i-label">Mood distribution</div>
+            <div style="margin-top:12px" id="moodBars">
+              <div style="font-size:13px;color:var(--muted)">Ingest entries with mood tags to see distribution</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Entry reader (full text + reflect) -->
+<div id="entryViewModal" class="entry-view-modal hidden" aria-hidden="true">
+  <div class="entry-view-backdrop" onclick="closeEntryViewer()"></div>
+  <div class="entry-view-panel" role="dialog" aria-modal="true" aria-labelledby="entryViewTitle">
+    <div class="entry-view-head">
+      <div>
+        <div class="entry-view-title" id="entryViewTitle">Journal entry</div>
+        <div class="entry-view-meta" id="entryViewMeta"></div>
+      </div>
+      <button type="button" class="entry-view-close" onclick="closeEntryViewer()" aria-label="Close">×</button>
+    </div>
+    <div class="entry-view-body" id="entryViewBody">Loading…</div>
+    <div class="entry-view-actions">
+      <button type="button" class="btn btn-secondary" onclick="closeEntryViewer()">Close</button>
+      <button type="button" class="btn btn-primary" id="entryViewReflect" onclick="reflectOnOpenEntry()" disabled>Reflect upon this entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm (Tauri/WKWebView often blocks window.confirm — use in-app dialog) -->
+<div id="deleteConfirmModal" class="entry-view-modal hidden" aria-hidden="true">
+  <div class="entry-view-backdrop" onclick="closeDeleteConfirm()"></div>
+  <div class="entry-view-panel" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
+    <div class="entry-view-head">
+      <div>
+        <div class="entry-view-title" id="deleteConfirmTitle">Remove this entry?</div>
+        <div class="entry-view-meta" id="deleteConfirmSub">This will remove it from your library and index. This cannot be undone.</div>
+      </div>
+      <button type="button" class="entry-view-close" onclick="closeDeleteConfirm()" aria-label="Close">×</button>
+    </div>
+    <div class="entry-view-actions" style="border-top:none;padding-top:4px;margin-top:0">
+      <button type="button" class="btn btn-secondary" onclick="closeDeleteConfirm()">Cancel</button>
+      <button type="button" class="btn btn-danger" id="deleteConfirmBtn" onclick="confirmDeleteEntry()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Tauri API -->
+<script>
+// ── Tauri bridge (works in both dev and production) ───────────────────────────
+function hasTauri() {
+  return !!(window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function');
+}
+
+function setOnboardDebug(text) {
+  const el = document.getElementById('onboard-debug');
+  if (!el) return;
+  el.style.display = 'block';
+  el.textContent = text;
+}
+
+window.addEventListener('error', (e) => {
+  const msg = e?.error?.stack || e?.message || String(e);
+  const el = document.getElementById('onboard-errors');
+  if (el) {
+    el.style.display = 'block';
+    el.textContent = `JS error:\n${msg}`;
+  }
+});
+window.addEventListener('unhandledrejection', (e) => {
+  const msg = e?.reason?.stack || e?.reason?.message || String(e?.reason || e);
+  const el = document.getElementById('onboard-errors');
+  if (el) {
+    el.style.display = 'block';
+    el.textContent = `Promise error:\n${msg}`;
+  }
+});
+
+// #region agent log
+function __dbgLog(location, message, data, hypothesisId) {
+  fetch('http://127.0.0.1:7806/ingest/c69f90eb-02cc-4d29-a98b-478ef7769869', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ff8a72' },
+    body: JSON.stringify({ sessionId: 'ff8a72', location, message, data, timestamp: Date.now(), hypothesisId }),
+  }).catch(() => {});
+}
+// #endregion
+
+async function invoke(cmd, args={}) {
+  if (hasTauri()) {
+    const inv = window.__TAURI__?.core?.invoke;
+    if (!inv) throw new Error('Tauri core.invoke not available');
+    return inv(cmd, args);
+  }
+  // Dev fallback — mock responses so UI works without Tauri running
+  return mockInvoke(cmd, args);
+}
+
+async function invokeWithTimeout(cmd, args={}, timeoutMs=2500) {
+  return Promise.race([
+    invoke(cmd, args),
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`invoke timeout: ${cmd}`)), timeoutMs)),
+  ]);
+}
+
+async function listen(event, cb) {
+  if (hasTauri()) {
+    return window.__TAURI__.event.listen(event, e => cb(e.payload));
+  }
+}
+
+// ── Quotes for loading state ──────────────────────────────────────────────────
+const QUOTES=[
+  {text:"The unexamined life is not worth living.",author:"— Socrates"},
+  {text:"In the middle of every difficulty lies opportunity.",author:"— Albert Einstein"},
+  {text:"You are allowed to be both a masterpiece and a work in progress.",author:"— Sophia Bush"},
+  {text:"What you seek is seeking you.",author:"— Rumi"},
+  {text:"Be gentle with yourself. You are a child of the universe.",author:"— Max Ehrmann"},
+  {text:"Not all those who wander are lost.",author:"— J.R.R. Tolkien"},
+  {text:"The only way out is through.",author:"— Robert Frost"},
+  {text:"We are not our moods. We are the ones who notice them.",author:"— Unknown"},
+  {text:"Small steps every day lead to big changes over time.",author:"— Unknown"},
+  {text:"Your story is still being written.",author:"— Unknown"},
+];
+
+// Keep a dynamic tauri indicator instead of freezing at load time.
+function isTauriEnv() { return hasTauri(); }
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let allEntries = [];
+let activeFilter = 'all';
+let selectedMood = null;
+let isLoading = false;
+let quoteInterval = null;
+let pendingOcrResult = null;
+let currentOcrPath = null;
+/** @type {{ entryId: number, date: string, sourcePath: string, text: string }} */
+let entryViewerContext = { entryId: 0, date: '', sourcePath: '', text: '' };
+/** Set when user taps trash; cleared after cancel or delete completes. */
+let pendingDeleteEntryId = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  const todayIso = new Date().toISOString().split('T')[0];
+  document.getElementById('entryDate').value = todayIso;
+  const bdd = document.getElementById('batchDefaultDate');
+  if (bdd) bdd.value = todayIso;
+  const batchFile = document.getElementById('batchDateFile');
+  const batchDef = document.getElementById('batchDateDefault');
+  const syncBatchDateUi = () => {
+    const useDefault = !!(batchDef && batchDef.checked);
+    if (bdd) bdd.disabled = !useDefault;
+  };
+  if (batchFile) batchFile.addEventListener('change', syncBatchDateUi);
+  if (batchDef) batchDef.addEventListener('change', syncBatchDateUi);
+  syncBatchDateUi();
+  const batchPick = document.getElementById('batchNativePickBtn');
+  const batchHint = document.getElementById('batchFolderHint');
+  if (isTauriEnv() && batchPick) {
+    batchPick.style.display = 'inline-flex';
+    batchPick.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      pickBatchFolderAndStart();
+    });
+    if (batchHint) {
+      batchHint.textContent =
+        'Click the zone or “Choose folder…” to open the system picker (needed for a real folder path).';
+    }
+  }
+  document.getElementById('welcomeTime').textContent = now();
+  buildCalendar([]);
+  runHealthCheck();
+  startHealthPolling();
+  await loadEntries();
+  setupStreamListeners();
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      const dm = document.getElementById('deleteConfirmModal');
+      if (dm && !dm.classList.contains('hidden')) {
+        closeDeleteConfirm();
+        return;
+      }
+      const m = document.getElementById('entryViewModal');
+      if (m && !m.classList.contains('hidden')) closeEntryViewer();
+    }
+  });
+});
+
+// ── Health check (onboarding) ─────────────────────────────────────────────────
+async function runHealthCheck() {
+  try {
+    setOnboardDebug(
+      `debug: ${new Date().toLocaleTimeString()} | hasTauri=${hasTauri()} | __TAURI__=${typeof window.__TAURI__}`
+    );
+
+    // Put rows into "loading" state every run
+    ['python','ollama','model','db'].forEach(id => {
+      const icon = document.getElementById(`chk-${id}-icon`);
+      const det = document.getElementById(`chk-${id}-detail`);
+      if (icon) { icon.textContent = '↻'; icon.className = 'check-icon loading'; }
+      if (det) det.textContent = 'Checking…';
+    });
+
+    const status = await invokeWithTimeout('health_check', {}, 3000);
+    console.log('[JournalBuddy] health_check', status);
+    updateCheck('python', status.python_ok, status.python_version || 'Not found');
+    updateCheck('ollama', status.ollama_ok, status.ollama_ok ? 'Running on localhost:11434' : 'Not running — run: ollama serve');
+    updateCheck('model', status.model_ok, status.model_ok ? `${status.model_name} ready` : `Not found — run: ollama pull ${status.model_name}`);
+    updateCheck('db', status.db_ok, `${status.db_entry_count} entries indexed`);
+
+    const errors = status.errors || [];
+    if (errors.length) {
+      document.getElementById('onboard-errors').style.display = 'block';
+      document.getElementById('onboard-errors').textContent = errors.join('\n');
+    }
+
+    // Continue only when required local components are OK.
+    // (Ollama/Model can be treated as "soft" requirements if you want, but by default we require them.)
+    const canContinue = !!(status.python_ok && status.db_ok && status.ollama_ok && status.model_ok);
+    document.getElementById('onboard-continue').disabled = !canContinue;
+
+    // Update chat online dot
+    document.getElementById('onlineDot').style.background = status.ollama_ok && status.model_ok ? '#61A641' : '#F2D16D';
+    document.getElementById('chat-sub').textContent =
+      `your private journal companion · ${status.db_entry_count} entries indexed`;
+
+  } catch(e) {
+    console.error('[JournalBuddy] health_check failed', e);
+    document.getElementById('onboard-errors').style.display = 'block';
+    document.getElementById('onboard-errors').textContent =
+      'Health check failed. Ensure the Tauri backend is running, then relaunch.';
+    document.getElementById('onboard-continue').disabled = true;
+  }
+}
+
+// Re-run health check periodically until "Continue" is enabled
+let healthPollTimer = null;
+function startHealthPolling() {
+  if (healthPollTimer) return;
+  healthPollTimer = setInterval(async () => {
+    const btn = document.getElementById('onboard-continue');
+    const onboarding = document.getElementById('onboarding');
+    const hidden = onboarding?.classList?.contains('hidden');
+    if (hidden || (btn && btn.disabled === false)) {
+      clearInterval(healthPollTimer);
+      healthPollTimer = null;
+      return;
+    }
+    await runHealthCheck();
+  }, 1200);
+}
+
+function updateCheck(id, ok, detail) {
+  const icon = document.getElementById(`chk-${id}-icon`);
+  const det = document.getElementById(`chk-${id}-detail`);
+  icon.textContent = ok ? '✓' : '✗';
+  icon.className = `check-icon ${ok ? 'ok' : 'fail'}`;
+  det.textContent = detail;
+}
+
+function skipOnboarding() { document.getElementById('onboarding').classList.add('hidden'); }
+function finishOnboarding() { document.getElementById('onboarding').classList.add('hidden'); }
+
+// ── Page navigation ───────────────────────────────────────────────────────────
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  if (el) el.classList.add('active');
+  if (id === 'library') loadEntries();
+  if (id === 'insights') loadInsights();
+}
+
+// ── Library ───────────────────────────────────────────────────────────────────
+async function loadEntries() {
+  try {
+    const entries = await invoke('get_all_entries');
+    allEntries = entries || [];
+    // #region agent log
+    const fe = allEntries[0];
+    __dbgLog('index.html:loadEntries', 'entries_loaded', {
+      count: allEntries.length,
+      firstKeys: fe ? Object.keys(fe) : [],
+      firstId: fe && fe.id != null ? fe.id : null,
+      missingIdCount: allEntries.filter(e => e.id == null).length,
+    }, 'H3');
+    // #endregion
+    renderEntries(allEntries);
+    buildCalendar(allEntries);
+    updateStreak(allEntries);
+    const sub = `${allEntries.length} ${allEntries.length===1?'entry':'entries'}`;
+    document.getElementById('library-subtitle').textContent = sub;
+  } catch(e) {
+    console.warn('Could not load entries:', e);
+  }
+}
+
+function renderEntries(entries) {
+  const grid = document.getElementById('entriesGrid');
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const filtered = entries.filter(e =>
+    (activeFilter === 'all' || (e.mood||'') === activeFilter) &&
+    (!q || e.date.toLowerCase().includes(q) || (e.preview||'').toLowerCase().includes(q))
+  );
+
+  if (!filtered.length) {
+    grid.innerHTML = `<div class="empty-state"><div class="empty-icon">🌱</div><div class="empty-title">${entries.length?'No matching entries':'Your library is empty'}</div><div class="empty-sub">${entries.length?'Try a different search or filter':'Add your first journal entry to get started'}</div></div>`;
+    return;
+  }
+
+  grid.innerHTML = filtered.map(e => `
+    <div class="entry-card mood-${e.mood||'okay'}" data-entry-id="${e.id != null ? escapeHtmlAttr(String(e.id)) : ''}" data-entry-date="${escapeHtmlAttr(e.date)}" data-entry-source="${escapeHtmlAttr(e.source_path)}" onclick="openEntryViewerFromCard(this)">
+      <button type="button" class="entry-delete" title="Delete entry" aria-label="Delete entry" onclick="event.stopPropagation(); event.preventDefault(); deleteLibraryEntry(this)">🗑</button>
+      <div class="entry-meta"><span class="entry-date">${e.date}</span><span class="mood-dot ${e.mood||'okay'}"></span></div>
+      <div class="entry-preview">${e.preview || e.source_path.split('/').pop()}</div>
+      <div class="entry-tags">${(e.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
+      <div class="entry-footer">
+        <span class="entry-words">${e.total_chunks} chunk${e.total_chunks!==1?'s':''}</span>
+        <span class="entry-source">${e.source_path.endsWith('.jpg')||e.source_path.endsWith('.heic')||e.source_path.endsWith('.png')?'📷 photo':'✏️ typed'}</span>
+      </div>
+    </div>`).join('');
+}
+
+function filterEntries() { renderEntries(allEntries); }
+
+function escapeHtmlAttr(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;');
+}
+
+function readEntryIdFromCard(card) {
+  const raw = card.dataset.entryId || card.getAttribute('data-entry-id');
+  if (raw == null || raw === '') return NaN;
+  const n = Number(raw);
+  const out = Number.isFinite(n) && n > 0 ? n : NaN;
+  // #region agent log
+  __dbgLog('index.html:readEntryIdFromCard', 'parsed_entry_id', { raw, out, datasetKeys: card.dataset ? Object.keys(card.dataset) : [] }, 'H2');
+  // #endregion
+  return out;
+}
+
+function openDeleteConfirm(entryId, previewHint) {
+  pendingDeleteEntryId = entryId;
+  const m = document.getElementById('deleteConfirmModal');
+  const sub = document.getElementById('deleteConfirmSub');
+  if (sub) sub.textContent = previewHint ? `“${previewHint.slice(0, 80)}${previewHint.length > 80 ? '…' : ''}” — cannot be undone.` : 'This will remove it from your library and index. This cannot be undone.';
+  if (m) {
+    m.classList.remove('hidden');
+    m.setAttribute('aria-hidden', 'false');
+  }
+}
+
+function closeDeleteConfirm() {
+  pendingDeleteEntryId = null;
+  const m = document.getElementById('deleteConfirmModal');
+  if (m) {
+    m.classList.add('hidden');
+    m.setAttribute('aria-hidden', 'true');
+  }
+}
+
+async function confirmDeleteEntry() {
+  const entryId = pendingDeleteEntryId;
+  closeDeleteConfirm();
+  if (!Number.isFinite(entryId)) return;
+  await performDeleteEntry(entryId);
+}
+
+async function performDeleteEntry(entryId) {
+  const prevAll = allEntries.slice();
+  allEntries = allEntries.filter(e => Number(e.id) !== entryId);
+  renderEntries(allEntries);
+  buildCalendar(allEntries);
+  updateStreak(allEntries);
+  const subEl = document.getElementById('library-subtitle');
+  if (subEl) subEl.textContent = `${allEntries.length} ${allEntries.length === 1 ? 'entry' : 'entries'}`;
+  try {
+    // #region agent log
+    __dbgLog('index.html:performDeleteEntry', 'invoke_delete', { entryId, invokeKeys: Object.keys({ entryId }) }, 'H1');
+    // #endregion
+    const res = await invoke('delete_journal_entry', { entryId });
+    if (!res || !res.ok) {
+      allEntries = prevAll;
+      renderEntries(allEntries);
+      buildCalendar(allEntries);
+      updateStreak(allEntries);
+      if (subEl) subEl.textContent = `${allEntries.length} ${allEntries.length === 1 ? 'entry' : 'entries'}`;
+      toast((res && res.error === 'not_found') ? 'That entry is no longer there' : 'Could not delete this entry', 'error');
+      await loadEntries();
+      return;
+    }
+    if (res.errors && res.errors.length) console.warn('Delete cleanup:', res.errors);
+    toast('Entry removed', 'success');
+    closeEntryViewer();
+    await loadEntries();
+  } catch (err) {
+    // #region agent log
+    __dbgLog('index.html:performDeleteEntry', 'invoke_delete_error', { err: String(err) }, 'H1');
+    // #endregion
+    allEntries = prevAll;
+    renderEntries(allEntries);
+    buildCalendar(allEntries);
+    updateStreak(allEntries);
+    if (subEl) subEl.textContent = `${allEntries.length} ${allEntries.length === 1 ? 'entry' : 'entries'}`;
+    toast('Delete failed: ' + err, 'error');
+    await loadEntries();
+  }
+}
+
+function deleteLibraryEntry(btn) {
+  // #region agent log
+  __dbgLog('index.html:deleteLibraryEntry', 'click', { tag: btn && btn.tagName, hasClosest: !!(btn && btn.closest) }, 'H6');
+  // #endregion
+  const card = btn && typeof btn.closest === 'function' ? btn.closest('.entry-card') : null;
+  if (!card) {
+    // #region agent log
+    __dbgLog('index.html:deleteLibraryEntry', 'no_card', { tag: btn && btn.tagName }, 'H6');
+    // #endregion
+    toast('Could not find this entry card. Try refreshing the library.', 'error');
+    return;
+  }
+  const entryId = readEntryIdFromCard(card);
+  if (!Number.isFinite(entryId)) {
+    // #region agent log
+    __dbgLog('index.html:deleteLibraryEntry', 'bad_entry_id', { entryId }, 'H2');
+    // #endregion
+    toast('Could not identify this entry. Try refreshing the library.', 'error');
+    return;
+  }
+  const hint = (card.querySelector('.entry-preview') && card.querySelector('.entry-preview').textContent) || '';
+  openDeleteConfirm(entryId, hint.trim());
+}
+
+function setFilter(f, el) {
+  activeFilter = f;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  filterEntries();
+}
+
+function closeEntryViewer() {
+  const modal = document.getElementById('entryViewModal');
+  if (modal) {
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+async function openEntryViewerFromCard(card) {
+  const entryId = readEntryIdFromCard(card);
+  const date = card.dataset.entryDate || card.getAttribute('data-entry-date');
+  const sourcePath = card.dataset.entrySource || card.getAttribute('data-entry-source') || '';
+  if (!Number.isFinite(entryId)) {
+    toast('Could not open this entry. Try refreshing the library.', 'error');
+    return;
+  }
+  entryViewerContext = { entryId, date, sourcePath, text: '' };
+  const modal = document.getElementById('entryViewModal');
+  const body = document.getElementById('entryViewBody');
+  const meta = document.getElementById('entryViewMeta');
+  const reflectBtn = document.getElementById('entryViewReflect');
+  modal.classList.remove('hidden');
+  modal.setAttribute('aria-hidden', 'false');
+  meta.textContent = (date || 'Entry') + ' · …';
+  body.textContent = 'Loading…';
+  reflectBtn.disabled = true;
+  try {
+    // #region agent log
+    __dbgLog('index.html:openEntryViewerFromCard', 'invoke_read', { entryId, invokeKeys: Object.keys({ entryId }) }, 'H1');
+    // #endregion
+    const res = await invoke('get_journal_entry_text', { entryId });
+    if (!res || !res.ok) {
+      const err = res && res.error;
+      // #region agent log
+      __dbgLog('index.html:openEntryViewerFromCard', 'read_failed', { err: err || 'unknown' }, 'H4');
+      // #endregion
+      body.textContent =
+        err === 'not_found' ? 'This entry is no longer in your library.' :
+        err === 'file_missing' ? 'The saved text file for this entry could not be found.' :
+        'Could not open this entry.';
+      meta.textContent = date;
+      return;
+    }
+    // #region agent log
+    __dbgLog('index.html:openEntryViewerFromCard', 'read_ok', { textLen: (res.text || '').length }, 'H4');
+    // #endregion
+    entryViewerContext.text = res.text || '';
+    if (res.date) entryViewerContext.date = res.date;
+    if (res.source_path) entryViewerContext.sourcePath = res.source_path;
+    const wc = res.word_count != null ? `${res.word_count} words` : 'saved';
+    const d = entryViewerContext.date || date;
+    meta.textContent = `${d} · ${wc}`;
+    body.textContent = (res.text && res.text.trim()) ? res.text : '(This entry is empty.)';
+    reflectBtn.disabled = !String(res.text || '').trim();
+  } catch (err) {
+    body.textContent = 'Failed to load: ' + err;
+    meta.textContent = date;
+  }
+}
+
+function reflectOnOpenEntry() {
+  const raw = (entryViewerContext.text || '').trim();
+  if (!raw) {
+    toast('Nothing to reflect on yet', 'error');
+    return;
+  }
+  const date = entryViewerContext.date;
+  let body = entryViewerContext.text;
+  const max = 14000;
+  if (body.length > max) {
+    body = body.slice(0, max) + '\n\n[Note: message shortened for the chat—your full entry is still in the library.]';
+  }
+  const questionForModel =
+    `I'd like to gently reflect on this journal entry from ${date}. Read it with warmth. Notice feelings and themes that matter to me—no lecturing, just stay with me.\n\n---\n${body}\n---\n\nWhat stands out to you? What's one gentle question that might help me understand myself better?`;
+  const displayOnly = `Reflect on this entry from ${date}`;
+  closeEntryViewer();
+  showPage('chat', document.querySelectorAll('.nav-item')[3]);
+  setTimeout(() => sendBrainRequest(displayOnly, questionForModel), 320);
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function buildCalendar(entries) {
+  const entryDates = new Set(entries.map(e => e.date));
+  const strip = document.getElementById('calStrip');
+  const days = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const today = new Date();
+  let html = '';
+  for (let i = 20; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate() - i);
+    const iso = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const isToday = i === 0, hasEntry = entryDates.has(iso) || entryDates.has(label);
+    html += `<div class="cal-day ${isToday?'today':''} ${hasEntry&&!isToday?'has-entry':''}">
+      <div class="cal-lbl">${days[d.getDay()]}</div>
+      <div class="cal-num">${d.getDate()}</div>
+      ${hasEntry?'<div class="cal-pip"></div>':''}
+    </div>`;
+  }
+  strip.innerHTML = html;
+}
+
+function updateStreak(entries) {
+  if (!entries.length) { document.getElementById('streakNum').textContent = '0'; return; }
+  // Simple consecutive day count from today backwards
+  const dates = new Set(entries.map(e => e.date));
+  let streak = 0, d = new Date();
+  while (true) {
+    const iso = d.toISOString().split('T')[0];
+    const label = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    if (dates.has(iso) || dates.has(label)) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  document.getElementById('streakNum').textContent = streak;
+}
+
+// ── New Entry — Type ──────────────────────────────────────────────────────────
+function switchMode(mode, el) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('mode-type').classList.toggle('active', mode==='type');
+  document.getElementById('mode-upload').classList.toggle('active', mode==='upload');
+}
+
+function selectMood(btn, mood) {
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected'); selectedMood = mood;
+}
+
+function updateWordCount() {
+  const t = document.getElementById('journalText').value;
+  const w = t.trim() ? t.trim().split(/\s+/).length : 0;
+  document.getElementById('wordCount').textContent = w + (w===1?' word':' words');
+}
+
+function clearEntry() {
+  document.getElementById('journalText').value = '';
+  document.getElementById('wordCount').textContent = '0 words';
+  selectedMood = null;
+  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
+}
+
+async function saveTypedEntry() {
+  const text = document.getElementById('journalText').value.trim();
+  const date = document.getElementById('entryDate').value;
+  if (!text) { toast('Please write something first', 'error'); return; }
+
+  const btn = document.getElementById('saveBtn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const report = await invoke('ingest_text', { text, date, source: `typed_${date}` });
+    toast(`✓ Saved — ${report.chunks_stored} chunks indexed`, 'success');
+    clearEntry();
+    await loadEntries();
+    showPage('library', document.querySelectorAll('.nav-item')[0]);
+  } catch(e) {
+    toast('Save failed: ' + e, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="white" stroke-width="2"><path d="M2 7l3.5 3.5L12 3"/></svg> Save & Index';
+  }
+}
+
+// ── New Entry — Upload / OCR ──────────────────────────────────────────────────
+function handleFileSelect(e) { if (e.target.files[0]) showUploadPreview(e.target.files[0]); }
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('over');
+  if (e.dataTransfer.files[0]) showUploadPreview(e.dataTransfer.files[0]);
+}
+
+function showUploadPreview(file) {
+  document.getElementById('previewName').textContent = file.name;
+  document.getElementById('previewSz').textContent = (file.size/1024/1024).toFixed(1) + ' MB';
+  document.getElementById('uploadPreview').classList.add('show');
+  document.getElementById('uploadActions').style.display = 'flex';
+  document.getElementById('ocrStatus').textContent = '';
+  document.getElementById('procBar').classList.remove('show');
+  currentOcrPath = file.path || file.name; // Tauri provides file.path
+}
+
+function resetUpload() {
+  document.getElementById('uploadPreview').classList.remove('show');
+  document.getElementById('uploadActions').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  pendingOcrResult = null; currentOcrPath = null;
+}
+
+async function runOCR() {
+  if (!currentOcrPath) { toast('No file selected', 'error'); return; }
+  const btn = document.getElementById('ocrBtn');
+  btn.disabled = true;
+  document.getElementById('procBar').classList.add('show');
+
+  try {
+    // Step 1+2: OCR + Correction
+    const result = await invoke('ocr_image', { image_path: currentOcrPath });
+    pendingOcrResult = result;
+
+    // Step 3-5: Ingest
+    const date = document.getElementById('entryDate').value;
+    const report = await invoke('ingest_ocr_result', {
+      text: result.text,
+      date,
+      source_path: currentOcrPath,
+    });
+
+    document.getElementById('procFill').style.width = '100%';
+    document.getElementById('ocrStatus').textContent = `✓ ${report.chunks_stored} chunks indexed`;
+    document.getElementById('ocrStatus').style.color = '#61A641';
+
+    toast(`✓ OCR complete — ${result.word_count} words indexed`, 'success');
+    await loadEntries();
+    setTimeout(() => {
+      resetUpload();
+      showPage('library', document.querySelectorAll('.nav-item')[0]);
+    }, 1500);
+
+  } catch(e) {
+    toast('OCR failed: ' + e, 'error');
+    document.getElementById('ocrStatus').textContent = '✗ ' + e;
+    document.getElementById('ocrStatus').style.color = '#c0392b';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// OCR progress events from Rust
+if (isTauriEnv()) {
+  listen('ocr-progress', data => {
+    document.getElementById('procFill').style.width = data.pct + '%';
+    document.getElementById('ocrStatus').textContent = data.label;
+  });
+  listen('batch-progress', data => {
+    document.getElementById('batchCurrentFile').textContent = data.filename || '—';
+    document.getElementById('batchCount').textContent = `${data.current} / ${data.total} files`;
+    document.getElementById('batchFill').style.width = data.pct + '%';
+    if (data.done) {
+      if (data.total > 0) toast(`✓ Batch complete — ${data.total} files processed`, 'success');
+      else toast(data.filename || 'Nothing to import', 'error');
+      loadEntries();
+    }
+  });
+}
+
+// ── Batch import ──────────────────────────────────────────────────────────────
+function batchZoneClick(e) {
+  if (isTauriEnv()) {
+    e.preventDefault();
+    pickBatchFolderAndStart();
+  } else {
+    document.getElementById('folderInput').click();
+  }
+}
+
+async function pickBatchFolderAndStart() {
+  const folderPath = await invoke('pick_batch_folder');
+  if (folderPath) await startBatch(folderPath, null);
+}
+
+function handleBatchDrop(e) {
+  e.preventDefault();
+  document.getElementById('batchZone').classList.remove('over');
+  const files = [...e.dataTransfer.files].filter(f => /\.(jpg|jpeg|png|heic)$/i.test(f.name));
+  if (!files.length) return;
+  if (isTauriEnv()) {
+    const p = files[0].path;
+    if (p) {
+      const folderPath = p.replace(files[0].name, '');
+      startBatch(folderPath, files);
+    } else {
+      toast('Drop did not expose file paths — use “Choose folder…”', 'error');
+    }
+    return;
+  }
+  startBatch(files[0].path.replace(files[0].name, ''), files);
+}
+
+function handleFolderSelect(e) {
+  const files = [...e.target.files];
+  if (!files.length) return;
+  if (isTauriEnv()) {
+    const p = files[0].path;
+    if (p) {
+      const folderPath = p.replace(files[0].name, '');
+      startBatch(folderPath, files);
+    } else {
+      toast('Could not read folder path — use “Choose folder…”', 'error');
+    }
+    return;
+  }
+  const folderPath = files[0].path ? files[0].path.replace(files[0].name, '') : 'selected folder';
+  startBatch(folderPath, files);
+}
+
+async function startBatch(folderPath, files) {
+  document.getElementById('batchProgress').classList.add('show');
+  document.getElementById('batchResults').innerHTML = '';
+  document.getElementById('batchCurrentFile').textContent = 'Starting…';
+  document.getElementById('batchCount').textContent = isTauriEnv() ? '…' : '0 / 0 files';
+  document.getElementById('batchFill').style.width = '0%';
+
+  const mode = document.getElementById('batchDateDefault')?.checked ? 'default' : 'file';
+  const defaultDate = document.getElementById('batchDefaultDate')?.value || new Date().toISOString().split('T')[0];
+
+  if (isTauriEnv()) {
+    try {
+      await invoke('batch_ingest_folder', { folderPath, dateMode: mode, defaultDate });
+    } catch (err) {
+      toast('Batch import failed: ' + err, 'error');
+      document.getElementById('batchCurrentFile').textContent = 'Failed';
+      document.getElementById('batchCount').textContent = '—';
+    }
+  } else {
+    // Browser dev mode — simulate
+    const total = files ? files.length : 5;
+    for (let i = 0; i < total; i++) {
+      const name = files ? files[i].name : `page_00${i+1}.jpg`;
+      document.getElementById('batchCurrentFile').textContent = name;
+      document.getElementById('batchCount').textContent = `${i+1} / ${total} files`;
+      document.getElementById('batchFill').style.width = Math.round(((i+1)/total)*100) + '%';
+      document.getElementById('batchResults').innerHTML +=
+        `<div class="batch-result-row"><span class="ok">✓</span>${name} — 3 chunks</div>`;
+      await new Promise(r => setTimeout(r, 600));
+    }
+    toast(`✓ Batch complete — ${total} files processed`, 'success');
+  }
+}
+
+// ── Chat ──────────────────────────────────────────────────────────────────────
+function setupStreamListeners() {
+  if (!isTauriEnv()) return;
+  listen('brain-token', token => appendToken(token));
+  listen('brain-done', () => finishStream());
+}
+
+let streamBubble = null;
+
+/**
+ * @param {string} displayText - Shown in the chat bubble (keep short; no private journal body).
+ * @param {string} [questionForModel] - Sent to Ollama; defaults to displayText (normal typing).
+ */
+function sendBrainRequest(displayText, questionForModel) {
+  document.getElementById('suggestedPrompts').style.display = 'none';
+  appendMessage('user', displayText);
+  startLoading();
+  const q = questionForModel !== undefined && questionForModel !== null ? questionForModel : displayText;
+
+  if (isTauriEnv()) {
+    invoke('ask_brain_stream', { question: q, top_k: 4 })
+      .catch(e => { hideLoading(); appendMessage('ai', '⚠ Error: ' + e); });
+  } else {
+    setTimeout(() => {
+      hideLoading();
+      appendMessage('ai',
+        "I've searched through your journal entries and found some relevant passages. Based on what you've written, I can see patterns of resilience and growth. Would you like me to explore a specific time period or theme?",
+        ['Recent entries']
+      );
+    }, 3500 + Math.random()*1500);
+  }
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+  input.value = ''; input.style.height = 'auto';
+  sendBrainRequest(text, text);
+}
+
+function sendPromptText(text) {
+  document.getElementById('chatInput').value = text;
+  sendChat();
+}
+
+function appendMessage(role, text, sources) {
+  const msgs = document.getElementById('chatMessages');
+  const srcHtml = sources ? `<div class="msg-sources">${sources.map(s=>`<span class="source-chip">📖 ${s}</span>`).join('')}</div>` : '';
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.innerHTML = `
+    <div class="msg-avatar ${role}">${role==='ai'?'S':'Y'}</div>
+    <div class="msg-body">
+      <div class="msg-bubble" id="${role==='ai'?'stream-bubble-'+Date.now():''}">${text}</div>
+      ${srcHtml}
+      <div class="msg-time">${now()}</div>
+    </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div.querySelector('.msg-bubble');
+}
+
+function appendToken(token) {
+  if (!streamBubble) {
+    hideLoading();
+    streamBubble = appendMessage('ai', '');
+  }
+  streamBubble.textContent += token;
+  document.getElementById('chatMessages').scrollTop = 999999;
+}
+
+function finishStream() {
+  streamBubble = null;
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+function startLoading() {
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  let qi = Math.floor(Math.random() * QUOTES.length);
+  const msgs = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.id = 'loadingMsg';
+  div.className = 'loading-msg';
+  div.innerHTML = `<div class="quote-card">
+    <svg class="quote-floral" width="72" height="72" viewBox="0 0 80 80" fill="none">
+      <circle cx="40" cy="40" r="35" fill="#365946"/><circle cx="40" cy="20" r="12" fill="#61A641"/>
+      <circle cx="56" cy="30" r="10" fill="#A6D98F"/><circle cx="56" cy="50" r="10" fill="#A6D98F"/>
+      <circle cx="40" cy="60" r="12" fill="#61A641"/><circle cx="24" cy="50" r="10" fill="#A6D98F"/>
+      <circle cx="24" cy="30" r="10" fill="#A6D98F"/><circle cx="40" cy="40" r="8" fill="#F2D16D"/>
+    </svg>
+    <div class="quote-text" id="quoteText">${QUOTES[qi].text}</div>
+    <div class="quote-author" id="quoteAuthor">${QUOTES[qi].author}</div>
+    <div class="q-dots"><div class="q-dot"></div><div class="q-dot"></div><div class="q-dot"></div></div>
+  </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  quoteInterval = setInterval(() => {
+    qi = (qi + 1) % QUOTES.length;
+    const qt = document.getElementById('quoteText');
+    const qa = document.getElementById('quoteAuthor');
+    if (qt) { qt.classList.remove('qfade'); void qt.offsetWidth; qt.textContent = QUOTES[qi].text; qa.textContent = QUOTES[qi].author; qt.classList.add('qfade'); }
+  }, 4000);
+}
+
+function hideLoading() {
+  clearInterval(quoteInterval);
+  const lm = document.getElementById('loadingMsg');
+  if (lm) lm.remove();
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+
+// ── Insights ──────────────────────────────────────────────────────────────────
+async function loadInsights() {
+  try {
+    const entries = await invoke('get_all_entries');
+    if (!entries || !entries.length) return;
+
+    document.getElementById('ins-total').textContent = entries.length;
+    document.getElementById('ins-total-sub').textContent =
+      `${entries.length} ${entries.length===1?'entry':'entries'} indexed`;
+
+    // Streak
+    let streak = 0;
+    const dates = new Set(entries.map(e => e.date));
+    let d = new Date();
+    while (dates.has(d.toISOString().split('T')[0]) || dates.has(d.toLocaleDateString('en-US',{month:'short',day:'numeric'}))) {
+      streak++; d.setDate(d.getDate()-1);
+    }
+    document.getElementById('ins-streak').textContent = streak;
+  } catch(e) { console.warn('Insights load failed:', e); }
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function now() { return new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }
+
+function toast(msg, type='success') {
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
+// ── Dev mock (browser without Tauri) ─────────────────────────────────────────
+function mockInvoke(cmd, args = {}) {
+  const mocks = {
+    health_check: { python_ok:true, ollama_ok:false, model_ok:false, db_ok:true, db_entry_count:0, python_version:'Python 3.12.0', model_name:'llama3:8b', errors:['Ollama not running'] },
+    get_all_entries: [
+      {
+        id: 1,
+        source_path: 'typed_2026-04-14_preview',
+        date: '2026-04-14',
+        ingested_at: '2026-04-14T12:00:00+00:00',
+        total_chunks: 2,
+        preview: 'Sample preview text for browser mode.',
+      },
+    ],
+    get_journal_entry_text: {
+      ok: true,
+      text: 'This is sample journal text for browser preview.\n\nYou tapped an entry in the library—when you run the real app, the full saved text appears here.',
+      date: '2026-04-14',
+      source_path: 'typed_2026-04-14_preview',
+      word_count: 42,
+      errors: [],
+    },
+    delete_journal_entry: { ok: true, deleted_id: 1, errors: [] },
+    ingest_text: { chunks_stored:3, skipped:0, errors:[] },
+    ingest_ocr_result: { chunks_stored:4, skipped:0, errors:[] },
+    ask_brain: { answer:'This is a mock response. Connect Tauri to get real answers from your journal.', chunks_used:0, fallback_used:true, context_dates:[], errors:[] },
+  };
+  return Promise.resolve(mocks[cmd] || {});
+}
+</script>
+</body>
+</html>

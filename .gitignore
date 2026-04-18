@@ -16,16 +16,42 @@ output/
 *.heic
 *.txt          # extracted journal text
 
-# LanguageTool cache (large, auto-downloads)
-~/.cache/language_tool_python/
-
-# macOS
+# OS
 .DS_Store
 
-# ChromaDB (future Module B — user's vector database)
-*.db
-chroma/
+# Node
+node_modules/
+dist/
+build/
+.vite/
+.parcel-cache/
+*.log
 
-# Start Up Scripts 
-start.sh
-stop.sh
+# Tauri/Rust
+src-tauri/target/
+src-tauri/gen/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Env / secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Editor (optional)
+.idea/
+.vscode/
+
+# App data (adjust names to your project)
+*.sqlite
+*.sqlite3
+*.db
+chroma*/
+chromadb*/
+data/
+storage/

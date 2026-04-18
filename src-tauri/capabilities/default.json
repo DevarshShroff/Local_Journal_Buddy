@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/macOS-schema.json",
+  "identifier": "default",
+  "description": "Default capability for main window (IPC + events).",
+  "local": true,
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:event:default"
+  ]
+}
+

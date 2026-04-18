@@ -1,0 +1,14 @@
+{
+  "name": "journal-buddy",
+  "version": "1.0.0",
+  "description": "Local Journal Buddy — 100% offline private mental health companion",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "tauri": "tauri"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Allow outgoing network connections (for Ollama on localhost) -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+
+  <!-- Allow reading files the user selects (journal photos) -->
+  <key>com.apple.security.files.user-selected.read-write</key>
+  <true/>
+
+  <!-- Allow writing to Application Support (ChromaDB storage) -->
+  <key>com.apple.security.files.downloads.read-write</key>
+  <true/>
+
+  <!-- Disable App Sandbox for local subprocess spawning (Python sidecar) -->
+  <!-- NOTE: sandboxed apps cannot spawn arbitrary processes.         -->
+  <!-- For a personal-use app, disabling sandbox is the correct call. -->
+  <key>com.apple.security.app-sandbox</key>
+  <false/>
+</dict>
+</plist>

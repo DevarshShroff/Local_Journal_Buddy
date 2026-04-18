@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key>
+  <string>Journal Buddy</string>
+
+  <key>CFBundleIdentifier</key>
+  <string>com.journalbuddy.app</string>
+
+  <key>CFBundleVersion</key>
+  <string>1.0.0</string>
+
+  <key>CFBundleShortVersionString</key>
+  <string>1.0.0</string>
+
+  <!-- Allow reading Photos library for HEIC journal photos -->
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Journal Buddy needs access to your photos to import journal pages.</string>
+
+  <!-- Microphone not used but macOS may ask -->
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Journal Buddy does not use the microphone.</string>
+
+  <!-- Required for Vision framework OCR -->
+  <key>NSCameraUsageDescription</key>
+  <string>Journal Buddy does not use the camera.</string>
+
+  <!-- macOS minimum version -->
+  <key>LSMinimumSystemVersion</key>
+  <string>13.0</string>
+
+  <!-- Hide from dock when running background tasks -->
+  <key>LSUIElement</key>
+  <false/>
+</dict>
+</plist>

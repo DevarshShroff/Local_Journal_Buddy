@@ -23,7 +23,8 @@ header() { echo -e "\n${BOLD}$1${RESET}"; echo -e "$(printf '─%.0s' {1..50})";
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PYTHON_BUNDLE_DIR="$SCRIPT_DIR/src-tauri/python"
-SCRIPTS_SRC="$SCRIPT_DIR"   # parent dir contains the .py files
+SCRIPTS_SRC="$SCRIPT_DIR/src-tauri/python_scripts"
+REQ_FILE="$SCRIPT_DIR/requirements.txt"
 
 header "1 · Preparing bundle directory"
 rm -rf "$PYTHON_BUNDLE_DIR"
@@ -60,35 +61,13 @@ VENV_PYTHON="$PYTHON_BUNDLE_DIR/bin/python3"
 header "4 · Installing Python dependencies"
 "$VENV_PIP" install --upgrade pip --quiet
 
-info "Installing pyobjc (Vision + Cocoa)…"
-"$VENV_PIP" install \
-    "pyobjc-core>=12.1" \
-    "pyobjc-framework-Vision>=12.1" \
-    "pyobjc-framework-Cocoa>=12.1" \
-    "pyobjc-framework-Quartz>=12.1" \
-    "pyobjc-framework-CoreML>=12.1" \
-    --quiet
-ok "pyobjc installed"
-
-info "Installing symspellpy…"
-"$VENV_PIP" install "symspellpy>=6.7" --quiet
-ok "symspellpy installed"
-
-info "Installing language-tool-python…"
-"$VENV_PIP" install "language-tool-python>=2.7" --quiet
-ok "language-tool-python installed"
-
-info "Installing ChromaDB…"
-"$VENV_PIP" install "chromadb>=0.5" --quiet
-ok "chromadb installed"
-
-info "Installing sentence-transformers…"
-"$VENV_PIP" install "sentence-transformers>=3.0" --quiet
-ok "sentence-transformers installed"
-
-info "Installing requests…"
-"$VENV_PIP" install "requests>=2.31" --quiet
-ok "requests installed"
+if [ ! -f "$REQ_FILE" ]; then
+    warn "requirements.txt not found at $REQ_FILE"
+    exit 1
+fi
+info "Installing from requirements.txt…"
+"$VENV_PIP" install -r "$REQ_FILE" --quiet
+ok "Dependencies installed"
 
 header "5 · Pre-downloading ML models into bundle"
 info "Downloading all-MiniLM-L6-v2 embedding model (~22 MB)…"
@@ -110,14 +89,14 @@ for script in \
     "ocr_corrector.py" \
     "librarian.py" \
     "brain.py" \
-    "batch_ingest.py"; do
+    "chunker.py" \
+    "embedding.py" \
+    "journal_store.py" \
+    "paths.py" \
+    "sovereign_store.py" \
+    "vision_ocr.py"; do
 
     src="$SCRIPTS_SRC/$script"
-    # batch_ingest.py is already in src-tauri/python/
-    if [ "$script" = "batch_ingest.py" ]; then
-        ok "$script (already in place)"
-        continue
-    fi
     if [ -f "$src" ]; then
         cp "$src" "$PYTHON_BUNDLE_DIR/$script"
         ok "$script"
@@ -126,11 +105,10 @@ for script in \
     fi
 done
 
-header "7 · Patching librarian.py for bundled model path"
-# Patch the model cache path so it uses the bundled models folder
-sed -i '' 's|EMBEDDING_MODEL = "all-MiniLM-L6-v2"|EMBEDDING_MODEL = "all-MiniLM-L6-v2"\nimport os as _os; _os.environ.setdefault("SENTENCE_TRANSFORMERS_HOME", _os.path.join(_os.path.dirname(__file__), "models"))|' \
-    "$PYTHON_BUNDLE_DIR/librarian.py" 2>/dev/null || warn "Patch skipped (already applied or sed issue)"
-ok "librarian.py patched"
+header "7 · Notes"
+info "Bundled model cache lives at: $PYTHON_BUNDLE_DIR/models"
+info "The app sets HF_HOME/SENTENCE_TRANSFORMERS_HOME via Rust env for offline use."
+ok "No patching needed"
 
 header "8 · Bundle size check"
 BUNDLE_SIZE=$(du -sh "$PYTHON_BUNDLE_DIR" | cut -f1)

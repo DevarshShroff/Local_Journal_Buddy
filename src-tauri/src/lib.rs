@@ -2,8 +2,9 @@
 
 pub mod python;
 pub mod health;
+pub mod ollama_managed;
 
-use tauri::{Emitter, AppHandle}; // Removed unused 'Manager'
+use tauri::{Emitter, AppHandle, RunEvent};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -98,7 +99,8 @@ pub struct OcrResult {
 }
 
 // Library read/delete use stable SQLite `entry_id` (i64) from the list payload — avoids
-// mismatched date/source strings through the webview. Other invokes: snake_case keys (`image_path`, `top_k`, …).
+// mismatched date/source strings through the webview. From the webview, pass Tauri v2 camelCase keys
+// (e.g. `imagePath`, `sourcePath`, `topK`, `folderPath`).
 
 // ── Commands ──────────────────────────────────────────────────────────────────
 
@@ -185,7 +187,14 @@ async fn delete_journal_entry(app: AppHandle, entry_id: i64) -> Result<DeleteEnt
 async fn ask_brain(app: AppHandle, question: String, top_k: Option<i32>) -> Result<BrainResponse, String> {
     let py = python::resolver(&app);
     let k = top_k.unwrap_or(4).to_string();
-    let output = py.run_json("brain.py", &["--ask", &question, "--top-k", &k, "--json"], None).await?;
+    let ob = ollama_managed::effective_ollama_base();
+    let output = py
+        .run_json(
+            "brain.py",
+            &["--ask", &question, "--top-k", &k, "--ollama-url", &ob, "--json"],
+            None,
+        )
+        .await?;
     serde_json::from_str(&output).map_err(|e| e.to_string())
 }
 
@@ -413,8 +422,16 @@ async fn batch_ingest_folder(
 
 #[cfg_attr(all(not(debug_assertions), target_os = "ios"), tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let context = tauri::generate_context!();
+    let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .setup(|app| {
+            let handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                ollama_managed::initialize(&handle).await;
+            });
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             health_check,
             ingest_text,
@@ -428,6 +445,11 @@ pub fn run() {
             pick_batch_folder,
             batch_ingest_folder,
         ])
-        .run(tauri::generate_context!())
-        .expect("error running Journal Buddy");
+        .build(context)
+        .expect("error building Journal Buddy");
+    app.run(|_app_handle, event| {
+        if matches!(event, RunEvent::Exit) {
+            ollama_managed::shutdown_managed();
+        }
+    });
 }

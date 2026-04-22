@@ -1,0 +1,22 @@
+#
+# Python deps for Journal Buddy's local pipeline (OCR, correction, embeddings, Chroma).
+# Used by `bundle_python.sh` to recreate `src-tauri/python/` (do NOT commit the venv itself).
+#
+
+# macOS Vision OCR bindings (pyobjc)
+pyobjc-core>=12.1
+pyobjc-framework-Vision>=12.1
+pyobjc-framework-Cocoa>=12.1
+pyobjc-framework-Quartz>=12.1
+pyobjc-framework-CoreML>=12.1
+
+# OCR correction
+symspellpy>=6.7
+language-tool-python>=2.7
+
+# Vector DB + embeddings
+chromadb>=0.5
+sentence-transformers>=3.0
+
+# HTTP helpers (some scripts use urllib, but requests is handy in dev)
+requests>=2.31

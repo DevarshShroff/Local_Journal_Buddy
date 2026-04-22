@@ -2,7 +2,7 @@
 // Checks Python, Ollama, model availability, and ChromaDB on first launch
 
 use tauri::AppHandle;
-use crate::{HealthStatus, python};
+use crate::{HealthStatus, ollama_managed, python};
 use std::time::Duration;
 
 pub async fn check_all(app: &AppHandle) -> Result<HealthStatus, String> {
@@ -49,7 +49,9 @@ pub async fn check_all(app: &AppHandle) -> Result<HealthStatus, String> {
         .build()
         .map_err(|e| format!("Failed to build HTTP client: {e}"))?;
 
-    match client.get("http://localhost:11434/api/tags").send().await {
+    let ollama_base = ollama_managed::effective_ollama_base();
+    let tags_url = format!("{}/api/tags", ollama_base.trim_end_matches('/'));
+    match client.get(tags_url).send().await {
         Ok(resp) if resp.status().is_success() => {
             status.ollama_ok = true;
 
@@ -63,16 +65,14 @@ pub async fn check_all(app: &AppHandle) -> Result<HealthStatus, String> {
                                 ms.iter().any(|m| {
                                     m["name"]
                                         .as_str()
-                                        .map(|n| n.contains("llama3"))
+                                        .map(|n| n.contains("llama3:8b") || n == "llama3:8b")
                                         .unwrap_or(false)
                                 })
                             })
                             .unwrap_or(false);
 
                         status.model_ok = model_found;
-                        if !model_found {
-                            status.errors.push("llama3:8b not found. Run: ollama pull llama3:8b".into());
-                        }
+                        // If missing, the managed Ollama installer will attempt to pull it automatically on first run.
                     } else {
                         status.errors.push("Ollama responded but JSON was invalid".into());
                     }
@@ -85,7 +85,10 @@ pub async fn check_all(app: &AppHandle) -> Result<HealthStatus, String> {
         }
         Err(_) => {
             // Important: never block onboarding on this.
-            status.errors.push("Ollama not reachable on localhost:11434. Start it with: ollama serve".into());
+            status.errors.push(format!(
+                "Ollama not reachable at {}. If you use your own install, set JOURNAL_BUDDY_USE_SYSTEM_OLLAMA=1 and run `ollama serve`.",
+                ollama_base
+            ));
         }
     };
 

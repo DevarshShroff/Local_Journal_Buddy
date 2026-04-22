@@ -17,13 +17,22 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
 .app{display:flex;height:100vh}
 
 /* ── Sidebar ── */
-.sidebar{width:220px;min-width:220px;background:var(--forest);display:flex;flex-direction:column;position:relative;overflow:hidden}
-.sidebar-floral{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:.12}
+.sidebar{
+  width:220px;min-width:220px;
+  background:var(--forest) url('sidebar-pattern.png') repeat;
+  background-size:260px auto;
+  display:flex;flex-direction:column;
+  position:relative;overflow:hidden;
+}
+.sidebar::after{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:linear-gradient(180deg,rgba(54,89,70,.72) 0%,rgba(36,61,49,.9) 100%);
+}
 .sidebar-top{padding:28px 20px 20px;border-bottom:1px solid rgba(255,255,255,.1);position:relative;z-index:1}
 .app-name{font-family:'Lora',serif;color:#F2F2F2;font-size:17px;font-weight:500;line-height:1.3}
 .app-tagline{font-size:11px;color:var(--sage);margin-top:4px;opacity:.8}
 .nav{padding:16px 12px;flex:1;position:relative;z-index:1}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:rgba(242,242,242,.65);font-size:13.5px;transition:all .18s;margin-bottom:2px;user-select:none}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;color:rgba(242,242,242,.65);font-size:13.5px;font-weight:600;transition:all .18s;margin-bottom:2px;user-select:none}
 .nav-item:hover{background:rgba(255,255,255,.08);color:#F2F2F2}
 .nav-item.active{background:rgba(166,217,143,.2);color:var(--sage)}
 .nav-icon{width:18px;height:18px;flex-shrink:0}
@@ -76,10 +85,6 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
 .search-input{width:100%;background:white;border:1.5px solid #e2ede7;border-radius:10px;padding:9px 14px 9px 38px;font-size:13.5px;color:var(--ink);font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s}
 .search-input:focus{border-color:var(--leaf)}
 .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
-.filter-chip{background:white;border:1.5px solid #e2ede7;border-radius:20px;padding:6px 14px;font-size:12.5px;cursor:pointer;color:var(--muted);transition:all .15s;white-space:nowrap}
-.filter-chip.active{background:var(--forest);color:white;border-color:var(--forest)}
-.filter-chip:hover:not(.active){border-color:var(--leaf);color:var(--forest)}
-
 /* ── Calendar strip ── */
 .calendar-strip{padding:0 32px 8px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
 .calendar-strip::-webkit-scrollbar{display:none}
@@ -96,24 +101,17 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
 .entries-grid{padding:8px 32px 32px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
 .entry-card{background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:18px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden}
 .entry-card:hover{border-color:var(--sage);transform:translateY(-2px);box-shadow:0 4px 16px rgba(54,89,70,.1)}
-.entry-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0}
-.entry-card.mood-great::before{background:var(--leaf)}
-.entry-card.mood-okay::before{background:var(--sun)}
-.entry-card.mood-hard::before{background:#d4896a}
-.entry-card.mood-anxious::before{background:var(--sage)}
+.entry-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:14px 14px 0 0;background:rgba(166,217,143,.55)}
 .entry-delete{position:absolute;top:12px;right:12px;width:34px;height:34px;border-radius:9px;border:1.5px solid #e8ebe9;background:rgba(255,255,255,.96);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;line-height:1;transition:all .15s;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.04)}
 .entry-delete:hover{background:#fff8f7;border-color:rgba(192,57,43,.35);color:var(--error)}
 .entry-delete:active{transform:scale(.96)}
-.entry-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding-right:40px}
+.entry-meta{display:flex;align-items:center;justify-content:flex-start;margin-bottom:10px;padding-right:40px}
 .entry-date{font-size:12px;color:var(--muted)}
-.mood-dot{width:8px;height:8px;border-radius:50%}
-.mood-dot.great{background:var(--leaf)}.mood-dot.okay{background:var(--sun)}.mood-dot.hard{background:#d4896a}.mood-dot.anxious{background:var(--sage)}
 .entry-preview{font-family:'Lora',serif;font-size:14px;line-height:1.6;color:var(--ink);display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .entry-tags{margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
 .tag{background:var(--cream);border-radius:6px;padding:3px 8px;font-size:11px;color:var(--muted)}
 .entry-footer{margin-top:14px;display:flex;align-items:center;justify-content:space-between}
 .entry-words{font-size:11px;color:var(--muted)}
-.entry-source{font-size:10.5px;color:var(--muted);background:var(--cream);border-radius:5px;padding:2px 7px}
 .empty-state{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted)}
 .empty-icon{font-size:36px;margin-bottom:12px}
 .empty-title{font-family:'Lora',serif;font-size:17px;color:var(--forest-dark);margin-bottom:6px}
@@ -143,10 +141,6 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
 .date-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .date-input{background:white;border:1.5px solid #e2ede7;border-radius:10px;padding:8px 14px;font-size:13px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none}
 .date-input:focus{border-color:var(--leaf)}
-.mood-row{display:flex;gap:8px;align-items:center}
-.mood-lbl{font-size:13px;color:var(--muted)}
-.mood-btn{width:34px;height:34px;border-radius:8px;border:1.5px solid #e2ede7;background:white;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .15s}
-.mood-btn:hover,.mood-btn.selected{border-color:var(--leaf);background:rgba(97,166,65,.08);transform:scale(1.1)}
 .journal-ta{flex:1;background:white;border:1.5px solid #e2ede7;border-radius:14px;padding:20px 24px;font-family:'Lora',serif;font-size:15px;line-height:1.8;color:var(--ink);resize:none;outline:none;min-height:240px;transition:border-color .15s}
 .journal-ta:focus{border-color:var(--sage)}
 .journal-ta::placeholder{color:#c0cfc7;font-style:italic}
@@ -231,15 +225,42 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
 .i-label{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
 .i-value{font-family:'Lora',serif;font-size:28px;color:var(--forest-dark)}
 .i-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
-.mood-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.mood-bar-lbl{font-size:13px;color:var(--ink);width:72px;flex-shrink:0}
-.mood-bar-track{flex:1;background:var(--cream);border-radius:4px;height:8px;overflow:hidden}
-.mood-bar-fill{height:100%;border-radius:4px}
-.mood-bar-num{font-size:12px;color:var(--muted);width:28px;text-align:right;flex-shrink:0}
+.heatmap-wrap{margin-top:18px;background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:18px}
+.heatmap-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.heatmap-title{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.heatmap-sub{font-size:12.5px;color:var(--muted)}
+.heatmap-grid{margin-top:12px;display:grid;grid-auto-flow:column;grid-auto-columns:12px;grid-template-rows:repeat(7,12px);gap:4px;align-items:start}
+.hm-day{width:12px;height:12px;border-radius:3px;background:#f5f2e6;border:1px solid rgba(36,61,49,.06)}
+.hm-day.l1{background:rgba(242,209,109,.22)}
+.hm-day.l2{background:rgba(242,209,109,.40)}
+.hm-day.l3{background:rgba(242,209,109,.62)}
+.hm-day.l4{background:rgba(242,209,109,.88)}
+.hm-day.today{outline:2px solid rgba(97,166,65,.55);outline-offset:1px}
+.hm-legend{display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:flex-end;flex-wrap:wrap}
+.hm-legend .lbl{font-size:11.5px;color:var(--muted)}
+.hm-legend .sw{width:12px;height:12px;border-radius:3px;border:1px solid rgba(36,61,49,.06)}
+.hm-legend .sw.z{background:#f5f2e6}
+.hm-legend .sw.l1{background:rgba(242,209,109,.22)}
+.hm-legend .sw.l2{background:rgba(242,209,109,.40)}
+.hm-legend .sw.l3{background:rgba(242,209,109,.62)}
+.hm-legend .sw.l4{background:rgba(242,209,109,.88)}
 .word-cloud{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 .w-tag{background:rgba(97,166,65,.08);border-radius:8px;padding:5px 12px;font-size:13px;color:var(--forest);border:1px solid rgba(97,166,65,.15)}
 .w-tag.big{font-size:15px;background:rgba(97,166,65,.13)}
 .w-tag.sm{font-size:11px;opacity:.75}
+
+/* ── Password lock ── */
+.lock-screen{position:fixed;inset:0;background:rgba(30,46,37,.92);z-index:1200;display:flex;align-items:center;justify-content:center}
+.lock-screen.hidden{display:none}
+.lock-card{background:white;border-radius:20px;padding:30px 32px;max-width:440px;width:92%}
+.lock-title{font-family:'Lora',serif;font-size:20px;color:var(--forest-dark);margin-bottom:6px}
+.lock-sub{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px}
+.lock-row{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.lock-label{font-size:12px;color:var(--muted)}
+.lock-input{background:white;border:1.5px solid #e2ede7;border-radius:10px;padding:10px 12px;font-size:13.5px;font-family:'DM Sans',sans-serif;color:var(--ink);outline:none}
+.lock-input:focus{border-color:var(--leaf)}
+.lock-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+.lock-note{font-size:11.5px;color:var(--muted);line-height:1.6;margin-top:12px}
 
 /* ── Notifications ── */
 .toast{position:fixed;bottom:24px;right:24px;background:var(--forest-dark);color:white;border-radius:12px;padding:12px 18px;font-size:13px;z-index:2000;animation:fadeUp .25s ease;max-width:320px}
@@ -250,6 +271,14 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
 @keyframes qdot{0%,80%,100%{transform:scale(.6);opacity:.4}40%{transform:scale(1);opacity:1}}
 @keyframes qfade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .qfade{animation:qfade .4s ease}
+
+/* ── Local AI setup banner ── */
+.setup-banner{position:fixed;left:240px;right:20px;top:18px;z-index:1150;background:white;border:1.5px solid #e8f0eb;border-radius:14px;padding:12px 14px;box-shadow:0 12px 32px rgba(0,0,0,.08);display:none;align-items:center;gap:12px}
+.setup-banner.show{display:flex}
+.setup-text{font-size:13px;color:var(--ink);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setup-pct{font-size:12px;color:var(--muted);flex-shrink:0}
+.setup-track{height:6px;background:#e8f0eb;border-radius:99px;overflow:hidden;flex:1}
+.setup-fill{height:100%;background:linear-gradient(90deg,var(--sun),rgba(242,209,109,.7));width:0%}
 </style>
 </head>
 <body>
@@ -290,7 +319,13 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
     </div>
 
     <div id="onboard-errors" class="onboard-error" style="display:none"></div>
-    <div id="onboard-debug" class="onboard-error" style="display:none;background:#f6f9ff;border-color:#c8d8ff;color:#2d3b63"></div>
+    <div style="margin-top:14px;display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="lockEnableToggle" style="width:16px;height:16px;accent-color:var(--leaf)"/>
+      <label for="lockEnableToggle" style="font-size:13px;color:var(--ink);cursor:pointer">Password protect Journal Buddy</label>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:6px;line-height:1.5">
+      If enabled, you’ll be prompted to set a password when you continue, and you’ll need it each time you open the app.
+    </div>
 
     <div class="onboard-actions">
       <button class="btn btn-secondary" onclick="skipOnboarding()">Skip for now</button>
@@ -299,16 +334,51 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
   </div>
 </div>
 
+<!-- ── Optional Password Lock ── -->
+<div id="lockScreen" class="lock-screen hidden" aria-hidden="true">
+  <div class="lock-card" role="dialog" aria-modal="true" aria-labelledby="lockTitle">
+    <div class="lock-title" id="lockTitle">Unlock Journal Buddy</div>
+    <div class="lock-sub" id="lockSub">Enter your password to continue.</div>
+
+    <div id="lockSetMode" style="display:none">
+      <div class="lock-row">
+        <div class="lock-label">New password</div>
+        <input class="lock-input" id="lockNew1" type="password" autocomplete="new-password" />
+      </div>
+      <div class="lock-row">
+        <div class="lock-label">Confirm password</div>
+        <input class="lock-input" id="lockNew2" type="password" autocomplete="new-password" />
+      </div>
+      <div class="lock-actions">
+        <button class="btn btn-secondary" type="button" onclick="lockCancelSetup()">Cancel</button>
+        <button class="btn btn-primary" type="button" onclick="lockConfirmSetup()">Enable lock</button>
+      </div>
+      <div class="lock-note">Password is stored locally as a salted hash. If you forget it, you’ll need to disable it by clearing this app’s local storage.</div>
+    </div>
+
+    <div id="lockUnlockMode">
+      <div class="lock-row">
+        <div class="lock-label">Password</div>
+        <input class="lock-input" id="lockPass" type="password" autocomplete="current-password" onkeydown="if(event.key==='Enter'){event.preventDefault();unlockAttempt()}" />
+      </div>
+      <div class="lock-actions">
+        <button class="btn btn-primary" type="button" onclick="unlockAttempt()">Unlock</button>
+      </div>
+      <div class="lock-note" id="lockErr" style="display:none;color:var(--error)"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Local AI Setup Banner ── -->
+<div class="setup-banner" id="setupBanner" aria-live="polite">
+  <div class="setup-text" id="setupText">Setting up local AI engine…</div>
+  <div class="setup-pct" id="setupPct">0%</div>
+  <div class="setup-track" aria-hidden="true"><div class="setup-fill" id="setupFill"></div></div>
+</div>
+
 <!-- ── App Shell ── -->
 <div class="app">
   <nav class="sidebar">
-    <svg class="sidebar-floral" viewBox="0 0 220 600" fill="none">
-      <circle cx="180" cy="80" r="55" fill="white"/><circle cx="160" cy="55" r="30" fill="white"/>
-      <circle cx="200" cy="110" r="25" fill="white"/><circle cx="30" cy="480" r="65" fill="white"/>
-      <circle cx="10" cy="510" r="35" fill="white"/><circle cx="60" cy="500" r="28" fill="white"/>
-      <path d="M150 200 Q170 170 190 200 Q170 230 150 200Z" fill="white"/>
-      <path d="M20 350 Q40 320 60 350 Q40 380 20 350Z" fill="white"/>
-    </svg>
     <div class="sidebar-top">
       <div class="app-name">📓 Journal Buddy</div>
       <div class="app-tagline">your private second brain</div>
@@ -363,10 +433,6 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
           <svg class="search-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4.5"/><path d="M10 10l3 3"/></svg>
           <input class="search-input" placeholder="Search entries…" id="searchInput" oninput="filterEntries()"/>
         </div>
-        <div class="filter-chip active" onclick="setFilter('all',this)">All</div>
-        <div class="filter-chip" onclick="setFilter('great',this)">Great</div>
-        <div class="filter-chip" onclick="setFilter('okay',this)">Okay</div>
-        <div class="filter-chip" onclick="setFilter('hard',this)">Hard</div>
       </div>
       <div class="entries-grid" id="entriesGrid">
         <div class="empty-state">
@@ -399,13 +465,6 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
         <div class="tab-content active" id="mode-type">
           <div class="date-row">
             <input class="date-input" type="date" id="entryDate"/>
-            <div class="mood-row">
-              <span class="mood-lbl">Feeling?</span>
-              <button class="mood-btn" onclick="selectMood(this,'great')" title="Great">🌿</button>
-              <button class="mood-btn" onclick="selectMood(this,'okay')" title="Okay">🌤</button>
-              <button class="mood-btn" onclick="selectMood(this,'hard')" title="Hard">🌧</button>
-              <button class="mood-btn" onclick="selectMood(this,'anxious')" title="Anxious">🍂</button>
-            </div>
           </div>
           <textarea class="journal-ta" id="journalText" placeholder="Dear journal, today I…" oninput="updateWordCount()"></textarea>
           <div class="char-count" id="wordCount">0 words</div>
@@ -561,11 +620,23 @@ html,body{height:100%;font-family:'DM Sans',sans-serif;background:var(--cream);c
         <div class="insights-grid" id="insightsGrid">
           <div class="i-card"><div class="i-label">Total entries</div><div class="i-value" id="ins-total">—</div><div class="i-sub" id="ins-total-sub"></div></div>
           <div class="i-card"><div class="i-label">Writing streak</div><div class="i-value" id="ins-streak">—</div><div class="i-sub">days in a row</div></div>
-          <div class="i-card full">
-            <div class="i-label">Mood distribution</div>
-            <div style="margin-top:12px" id="moodBars">
-              <div style="font-size:13px;color:var(--muted)">Ingest entries with mood tags to see distribution</div>
+        </div>
+        <div class="heatmap-wrap">
+          <div class="heatmap-head">
+            <div>
+              <div class="heatmap-title">Last 6 months</div>
+              <div class="heatmap-sub" id="hmSub">—</div>
             </div>
+          </div>
+          <div class="heatmap-grid" id="heatmapGrid" aria-label="Activity heatmap"></div>
+          <div class="hm-legend" aria-hidden="true">
+            <span class="lbl">Less</span>
+            <span class="sw z"></span>
+            <span class="sw l1"></span>
+            <span class="sw l2"></span>
+            <span class="sw l3"></span>
+            <span class="sw l4"></span>
+            <span class="lbl">More</span>
           </div>
         </div>
       </div>
@@ -618,12 +689,7 @@ function hasTauri() {
   return !!(window.__TAURI__ && window.__TAURI__.core && typeof window.__TAURI__.core.invoke === 'function');
 }
 
-function setOnboardDebug(text) {
-  const el = document.getElementById('onboard-debug');
-  if (!el) return;
-  el.style.display = 'block';
-  el.textContent = text;
-}
+// Debug UI intentionally disabled for release builds.
 
 window.addEventListener('error', (e) => {
   const msg = e?.error?.stack || e?.message || String(e);
@@ -641,16 +707,6 @@ window.addEventListener('unhandledrejection', (e) => {
     el.textContent = `Promise error:\n${msg}`;
   }
 });
-
-// #region agent log
-function __dbgLog(location, message, data, hypothesisId) {
-  fetch('http://127.0.0.1:7806/ingest/c69f90eb-02cc-4d29-a98b-478ef7769869', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': 'ff8a72' },
-    body: JSON.stringify({ sessionId: 'ff8a72', location, message, data, timestamp: Date.now(), hypothesisId }),
-  }).catch(() => {});
-}
-// #endregion
 
 async function invoke(cmd, args={}) {
   if (hasTauri()) {
@@ -694,8 +750,6 @@ function isTauriEnv() { return hasTauri(); }
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let allEntries = [];
-let activeFilter = 'all';
-let selectedMood = null;
 let isLoading = false;
 let quoteInterval = null;
 let pendingOcrResult = null;
@@ -739,6 +793,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   startHealthPolling();
   await loadEntries();
   setupStreamListeners();
+  // If lock is enabled, prompt after onboarding decisions.
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       const dm = document.getElementById('deleteConfirmModal');
@@ -755,29 +810,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 // ── Health check (onboarding) ─────────────────────────────────────────────────
 async function runHealthCheck() {
   try {
-    setOnboardDebug(
-      `debug: ${new Date().toLocaleTimeString()} | hasTauri=${hasTauri()} | __TAURI__=${typeof window.__TAURI__}`
-    );
-
-    // Put rows into "loading" state every run
-    ['python','ollama','model','db'].forEach(id => {
-      const icon = document.getElementById(`chk-${id}-icon`);
-      const det = document.getElementById(`chk-${id}-detail`);
-      if (icon) { icon.textContent = '↻'; icon.className = 'check-icon loading'; }
-      if (det) det.textContent = 'Checking…';
-    });
+    // Avoid flicker: only update rows when values change.
 
     const status = await invokeWithTimeout('health_check', {}, 3000);
     console.log('[JournalBuddy] health_check', status);
-    updateCheck('python', status.python_ok, status.python_version || 'Not found');
-    updateCheck('ollama', status.ollama_ok, status.ollama_ok ? 'Running on localhost:11434' : 'Not running — run: ollama serve');
-    updateCheck('model', status.model_ok, status.model_ok ? `${status.model_name} ready` : `Not found — run: ollama pull ${status.model_name}`);
-    updateCheck('db', status.db_ok, `${status.db_entry_count} entries indexed`);
 
-    const errors = status.errors || [];
-    if (errors.length) {
-      document.getElementById('onboard-errors').style.display = 'block';
-      document.getElementById('onboard-errors').textContent = errors.join('\n');
+    const next = {
+      python_ok: !!status.python_ok,
+      python_version: status.python_version || 'Not found',
+      ollama_ok: !!status.ollama_ok,
+      model_ok: !!status.model_ok,
+      model_name: status.model_name || 'llama3:8b',
+      db_ok: !!status.db_ok,
+      db_entry_count: Number(status.db_entry_count || 0),
+      errors: Array.isArray(status.errors) ? status.errors.join('\n') : '',
+    };
+    const prev = window.__lastHealth || null;
+    window.__lastHealth = next;
+
+    if (!prev || prev.python_ok !== next.python_ok || prev.python_version !== next.python_version) {
+      updateCheck('python', next.python_ok, next.python_version);
+    }
+    if (!prev || prev.ollama_ok !== next.ollama_ok) {
+      updateCheck('ollama', next.ollama_ok, next.ollama_ok ? 'Running locally' : 'Setting up locally…');
+    }
+    if (!prev || prev.model_ok !== next.model_ok || prev.model_name !== next.model_name) {
+    updateCheck('model', next.model_ok, next.model_ok ? `${next.model_name} ready` : `${next.model_name} installing…`);
+    }
+    if (!prev || prev.db_ok !== next.db_ok || prev.db_entry_count !== next.db_entry_count) {
+      updateCheck('db', next.db_ok, `${next.db_entry_count} entries indexed`);
+    }
+
+    const errEl = document.getElementById('onboard-errors');
+    if (errEl) {
+      if (next.errors) {
+        if (!prev || prev.errors !== next.errors) errEl.textContent = next.errors;
+        errEl.style.display = 'block';
+      } else {
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+      }
     }
 
     // Continue only when required local components are OK.
@@ -813,7 +885,7 @@ function startHealthPolling() {
       return;
     }
     await runHealthCheck();
-  }, 1200);
+  }, 1500);
 }
 
 function updateCheck(id, ok, detail) {
@@ -824,8 +896,19 @@ function updateCheck(id, ok, detail) {
   det.textContent = detail;
 }
 
-function skipOnboarding() { document.getElementById('onboarding').classList.add('hidden'); }
-function finishOnboarding() { document.getElementById('onboarding').classList.add('hidden'); }
+function skipOnboarding() {
+  document.getElementById('onboarding').classList.add('hidden');
+  maybeShowLockOnStart();
+}
+function finishOnboarding() {
+  const wantsLock = !!document.getElementById('lockEnableToggle')?.checked;
+  document.getElementById('onboarding').classList.add('hidden');
+  if (wantsLock && !lockIsEnabled()) {
+    lockStartSetup();
+    return;
+  }
+  maybeShowLockOnStart();
+}
 
 // ── Page navigation ───────────────────────────────────────────────────────────
 function showPage(id, el) {
@@ -842,15 +925,6 @@ async function loadEntries() {
   try {
     const entries = await invoke('get_all_entries');
     allEntries = entries || [];
-    // #region agent log
-    const fe = allEntries[0];
-    __dbgLog('index.html:loadEntries', 'entries_loaded', {
-      count: allEntries.length,
-      firstKeys: fe ? Object.keys(fe) : [],
-      firstId: fe && fe.id != null ? fe.id : null,
-      missingIdCount: allEntries.filter(e => e.id == null).length,
-    }, 'H3');
-    // #endregion
     renderEntries(allEntries);
     buildCalendar(allEntries);
     updateStreak(allEntries);
@@ -865,8 +939,7 @@ function renderEntries(entries) {
   const grid = document.getElementById('entriesGrid');
   const q = document.getElementById('searchInput').value.toLowerCase();
   const filtered = entries.filter(e =>
-    (activeFilter === 'all' || (e.mood||'') === activeFilter) &&
-    (!q || e.date.toLowerCase().includes(q) || (e.preview||'').toLowerCase().includes(q))
+    !q || e.date.toLowerCase().includes(q) || (e.preview||'').toLowerCase().includes(q)
   );
 
   if (!filtered.length) {
@@ -875,14 +948,13 @@ function renderEntries(entries) {
   }
 
   grid.innerHTML = filtered.map(e => `
-    <div class="entry-card mood-${e.mood||'okay'}" data-entry-id="${e.id != null ? escapeHtmlAttr(String(e.id)) : ''}" data-entry-date="${escapeHtmlAttr(e.date)}" data-entry-source="${escapeHtmlAttr(e.source_path)}" onclick="openEntryViewerFromCard(this)">
+    <div class="entry-card" data-entry-id="${e.id != null ? escapeHtmlAttr(String(e.id)) : ''}" data-entry-date="${escapeHtmlAttr(e.date)}" data-entry-source="${escapeHtmlAttr(e.source_path)}" onclick="openEntryViewerFromCard(this)">
       <button type="button" class="entry-delete" title="Delete entry" aria-label="Delete entry" onclick="event.stopPropagation(); event.preventDefault(); deleteLibraryEntry(this)">🗑</button>
-      <div class="entry-meta"><span class="entry-date">${e.date}</span><span class="mood-dot ${e.mood||'okay'}"></span></div>
+      <div class="entry-meta"><span class="entry-date">${e.date}</span></div>
       <div class="entry-preview">${e.preview || e.source_path.split('/').pop()}</div>
       <div class="entry-tags">${(e.tags||[]).map(t=>`<span class="tag">${t}</span>`).join('')}</div>
       <div class="entry-footer">
         <span class="entry-words">${e.total_chunks} chunk${e.total_chunks!==1?'s':''}</span>
-        <span class="entry-source">${e.source_path.endsWith('.jpg')||e.source_path.endsWith('.heic')||e.source_path.endsWith('.png')?'📷 photo':'✏️ typed'}</span>
       </div>
     </div>`).join('');
 }
@@ -901,9 +973,6 @@ function readEntryIdFromCard(card) {
   if (raw == null || raw === '') return NaN;
   const n = Number(raw);
   const out = Number.isFinite(n) && n > 0 ? n : NaN;
-  // #region agent log
-  __dbgLog('index.html:readEntryIdFromCard', 'parsed_entry_id', { raw, out, datasetKeys: card.dataset ? Object.keys(card.dataset) : [] }, 'H2');
-  // #endregion
   return out;
 }
 
@@ -943,9 +1012,6 @@ async function performDeleteEntry(entryId) {
   const subEl = document.getElementById('library-subtitle');
   if (subEl) subEl.textContent = `${allEntries.length} ${allEntries.length === 1 ? 'entry' : 'entries'}`;
   try {
-    // #region agent log
-    __dbgLog('index.html:performDeleteEntry', 'invoke_delete', { entryId, invokeKeys: Object.keys({ entryId }) }, 'H1');
-    // #endregion
     const res = await invoke('delete_journal_entry', { entryId });
     if (!res || !res.ok) {
       allEntries = prevAll;
@@ -962,9 +1028,6 @@ async function performDeleteEntry(entryId) {
     closeEntryViewer();
     await loadEntries();
   } catch (err) {
-    // #region agent log
-    __dbgLog('index.html:performDeleteEntry', 'invoke_delete_error', { err: String(err) }, 'H1');
-    // #endregion
     allEntries = prevAll;
     renderEntries(allEntries);
     buildCalendar(allEntries);
@@ -976,34 +1039,18 @@ async function performDeleteEntry(entryId) {
 }
 
 function deleteLibraryEntry(btn) {
-  // #region agent log
-  __dbgLog('index.html:deleteLibraryEntry', 'click', { tag: btn && btn.tagName, hasClosest: !!(btn && btn.closest) }, 'H6');
-  // #endregion
   const card = btn && typeof btn.closest === 'function' ? btn.closest('.entry-card') : null;
   if (!card) {
-    // #region agent log
-    __dbgLog('index.html:deleteLibraryEntry', 'no_card', { tag: btn && btn.tagName }, 'H6');
-    // #endregion
     toast('Could not find this entry card. Try refreshing the library.', 'error');
     return;
   }
   const entryId = readEntryIdFromCard(card);
   if (!Number.isFinite(entryId)) {
-    // #region agent log
-    __dbgLog('index.html:deleteLibraryEntry', 'bad_entry_id', { entryId }, 'H2');
-    // #endregion
     toast('Could not identify this entry. Try refreshing the library.', 'error');
     return;
   }
   const hint = (card.querySelector('.entry-preview') && card.querySelector('.entry-preview').textContent) || '';
   openDeleteConfirm(entryId, hint.trim());
-}
-
-function setFilter(f, el) {
-  activeFilter = f;
-  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
-  el.classList.add('active');
-  filterEntries();
 }
 
 function closeEntryViewer() {
@@ -1033,15 +1080,9 @@ async function openEntryViewerFromCard(card) {
   body.textContent = 'Loading…';
   reflectBtn.disabled = true;
   try {
-    // #region agent log
-    __dbgLog('index.html:openEntryViewerFromCard', 'invoke_read', { entryId, invokeKeys: Object.keys({ entryId }) }, 'H1');
-    // #endregion
     const res = await invoke('get_journal_entry_text', { entryId });
     if (!res || !res.ok) {
       const err = res && res.error;
-      // #region agent log
-      __dbgLog('index.html:openEntryViewerFromCard', 'read_failed', { err: err || 'unknown' }, 'H4');
-      // #endregion
       body.textContent =
         err === 'not_found' ? 'This entry is no longer in your library.' :
         err === 'file_missing' ? 'The saved text file for this entry could not be found.' :
@@ -1049,9 +1090,6 @@ async function openEntryViewerFromCard(card) {
       meta.textContent = date;
       return;
     }
-    // #region agent log
-    __dbgLog('index.html:openEntryViewerFromCard', 'read_ok', { textLen: (res.text || '').length }, 'H4');
-    // #endregion
     entryViewerContext.text = res.text || '';
     if (res.date) entryViewerContext.date = res.date;
     if (res.source_path) entryViewerContext.sourcePath = res.source_path;
@@ -1129,11 +1167,6 @@ function switchMode(mode, el) {
   document.getElementById('mode-upload').classList.toggle('active', mode==='upload');
 }
 
-function selectMood(btn, mood) {
-  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
-  btn.classList.add('selected'); selectedMood = mood;
-}
-
 function updateWordCount() {
   const t = document.getElementById('journalText').value;
   const w = t.trim() ? t.trim().split(/\s+/).length : 0;
@@ -1143,8 +1176,6 @@ function updateWordCount() {
 function clearEntry() {
   document.getElementById('journalText').value = '';
   document.getElementById('wordCount').textContent = '0 words';
-  selectedMood = null;
-  document.querySelectorAll('.mood-btn').forEach(b => b.classList.remove('selected'));
 }
 
 async function saveTypedEntry() {
@@ -1202,7 +1233,7 @@ async function runOCR() {
 
   try {
     // Step 1+2: OCR + Correction
-    const result = await invoke('ocr_image', { image_path: currentOcrPath });
+    const result = await invoke('ocr_image', { imagePath: currentOcrPath });
     pendingOcrResult = result;
 
     // Step 3-5: Ingest
@@ -1210,7 +1241,7 @@ async function runOCR() {
     const report = await invoke('ingest_ocr_result', {
       text: result.text,
       date,
-      source_path: currentOcrPath,
+      sourcePath: currentOcrPath,
     });
 
     document.getElementById('procFill').style.width = '100%';
@@ -1248,6 +1279,23 @@ if (isTauriEnv()) {
       else toast(data.filename || 'Nothing to import', 'error');
       loadEntries();
     }
+  });
+  listen('ollama-setup', data => {
+    const b = document.getElementById('setupBanner');
+    const t = document.getElementById('setupText');
+    const p = document.getElementById('setupPct');
+    const f = document.getElementById('setupFill');
+    if (!b || !t || !p || !f) return;
+
+    const msg = data && data.message ? String(data.message) : 'Setting up local AI engine…';
+    const pct = data && typeof data.pct === 'number' ? data.pct : 0;
+    const done = !!(data && data.done);
+
+    t.textContent = msg;
+    p.textContent = `${pct}%`;
+    f.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+    b.classList.add('show');
+    if (done) setTimeout(() => b.classList.remove('show'), 1200);
   });
 }
 
@@ -1320,18 +1368,9 @@ async function startBatch(folderPath, files) {
       document.getElementById('batchCount').textContent = '—';
     }
   } else {
-    // Browser dev mode — simulate
-    const total = files ? files.length : 5;
-    for (let i = 0; i < total; i++) {
-      const name = files ? files[i].name : `page_00${i+1}.jpg`;
-      document.getElementById('batchCurrentFile').textContent = name;
-      document.getElementById('batchCount').textContent = `${i+1} / ${total} files`;
-      document.getElementById('batchFill').style.width = Math.round(((i+1)/total)*100) + '%';
-      document.getElementById('batchResults').innerHTML +=
-        `<div class="batch-result-row"><span class="ok">✓</span>${name} — 3 chunks</div>`;
-      await new Promise(r => setTimeout(r, 600));
-    }
-    toast(`✓ Batch complete — ${total} files processed`, 'success');
+    document.getElementById('batchCurrentFile').textContent = 'Not available';
+    document.getElementById('batchCount').textContent = '—';
+    toast('Batch import runs in the desktop app (folder paths and OCR are not available in this browser preview).', 'error');
   }
 }
 
@@ -1355,16 +1394,11 @@ function sendBrainRequest(displayText, questionForModel) {
   const q = questionForModel !== undefined && questionForModel !== null ? questionForModel : displayText;
 
   if (isTauriEnv()) {
-    invoke('ask_brain_stream', { question: q, top_k: 4 })
+    invoke('ask_brain_stream', { question: q, topK: 4 })
       .catch(e => { hideLoading(); appendMessage('ai', '⚠ Error: ' + e); });
   } else {
-    setTimeout(() => {
-      hideLoading();
-      appendMessage('ai',
-        "I've searched through your journal entries and found some relevant passages. Based on what you've written, I can see patterns of resilience and growth. Would you like me to explore a specific time period or theme?",
-        ['Recent entries']
-      );
-    }, 3500 + Math.random()*1500);
+    hideLoading();
+    appendMessage('ai', 'Sage runs inside the Journal Buddy desktop app with your local journal and Ollama. Open the app with Tauri to chat here—this browser preview does not call your real data.');
   }
 }
 
@@ -1453,23 +1487,112 @@ function hideLoading() {
 
 // ── Insights ──────────────────────────────────────────────────────────────────
 async function loadInsights() {
+  const insTotal = document.getElementById('ins-total');
+  const insTotalSub = document.getElementById('ins-total-sub');
+  const insStreak = document.getElementById('ins-streak');
   try {
     const entries = await invoke('get_all_entries');
-    if (!entries || !entries.length) return;
-
-    document.getElementById('ins-total').textContent = entries.length;
-    document.getElementById('ins-total-sub').textContent =
-      `${entries.length} ${entries.length===1?'entry':'entries'} indexed`;
-
-    // Streak
-    let streak = 0;
-    const dates = new Set(entries.map(e => e.date));
-    let d = new Date();
-    while (dates.has(d.toISOString().split('T')[0]) || dates.has(d.toLocaleDateString('en-US',{month:'short',day:'numeric'}))) {
-      streak++; d.setDate(d.getDate()-1);
+    if (!entries || !entries.length) {
+      if (insTotal) insTotal.textContent = '—';
+      if (insTotalSub) insTotalSub.textContent = '';
+      if (insStreak) insStreak.textContent = '—';
+      renderHeatmap([]);
+      return;
     }
-    document.getElementById('ins-streak').textContent = streak;
-  } catch(e) { console.warn('Insights load failed:', e); }
+
+    if (insTotal) insTotal.textContent = entries.length;
+    if (insTotalSub) {
+      insTotalSub.textContent =
+        `${entries.length} ${entries.length === 1 ? 'entry' : 'entries'} indexed`;
+    }
+
+    const dates = new Set(entries.map(e => e.date));
+    let streak = 0;
+    const cur = new Date();
+    cur.setHours(12, 0, 0, 0);
+    for (;;) {
+      const key = cur.toISOString().split('T')[0];
+      if (!dates.has(key)) break;
+      streak += 1;
+      cur.setDate(cur.getDate() - 1);
+    }
+    if (insStreak) insStreak.textContent = streak;
+    renderHeatmap(entries);
+  } catch (e) {
+    console.warn('Insights load failed:', e);
+  }
+}
+
+function renderHeatmap(entries) {
+  const grid = document.getElementById('heatmapGrid');
+  const sub = document.getElementById('hmSub');
+  if (!grid) return;
+
+  // Count entries per ISO date
+  const counts = new Map();
+  for (const e of (entries || [])) {
+    const d = String(e.date || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) continue;
+    counts.set(d, (counts.get(d) || 0) + 1);
+  }
+
+  const today = new Date();
+  today.setHours(12, 0, 0, 0);
+
+  // Build range: last 6 months up to today, aligned to Sunday start (GitHub-like columns = weeks).
+  const end = new Date(today);
+  const start = new Date(today);
+  start.setMonth(start.getMonth() - 6);
+  start.setHours(12, 0, 0, 0);
+  // Move start back to Sunday
+  start.setDate(start.getDate() - start.getDay());
+
+  const dates = [];
+  const cur = new Date(start);
+  while (cur <= end) {
+    dates.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  // Legend thresholds (simple, robust): 1,2,3,4+ entries.
+  const levelFor = (n) => {
+    if (!n) return '';
+    if (n === 1) return 'l1';
+    if (n === 2) return 'l2';
+    if (n === 3) return 'l3';
+    return 'l4';
+  };
+
+  const iso = (d) => d.toISOString().split('T')[0];
+  const monthFmt = (d) => d.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  const startLabel = monthFmt(start);
+  const endLabel = monthFmt(end);
+
+  // Render: grid auto-flows columns; we output day cells in date order.
+  grid.innerHTML = dates
+    .map((d) => {
+      const key = iso(d);
+      const n = counts.get(key) || 0;
+      const cls = ['hm-day', levelFor(n), key === iso(today) ? 'today' : ''].filter(Boolean).join(' ');
+      const title = `${key} • ${n} entr${n === 1 ? 'y' : 'ies'}`;
+      return `<div class="${cls}" title="${title}" data-date="${key}" data-count="${n}"></div>`;
+    })
+    .join('');
+
+  // Summary line: total entries in range + best day.
+  let total = 0;
+  let best = 0;
+  let bestDay = '';
+  for (const d of dates) {
+    const key = iso(d);
+    const n = counts.get(key) || 0;
+    total += n;
+    if (n > best) { best = n; bestDay = key; }
+  }
+  if (sub) {
+    sub.textContent =
+      `${startLabel} → ${endLabel} · ${total} entr${total === 1 ? 'y' : 'ies'} · max ${best}${bestDay ? ` on ${bestDay}` : ''}`;
+  }
 }
 
 // ── Utilities ─────────────────────────────────────────────────────────────────
@@ -1481,6 +1604,127 @@ function toast(msg, type='success') {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3500);
+}
+
+// ── Password lock (local-only) ────────────────────────────────────────────────
+const LOCK_KEYS = {
+  enabled: 'jb_lock_enabled',
+  salt: 'jb_lock_salt_b64',
+  hash: 'jb_lock_hash_b64',
+  iters: 'jb_lock_iters',
+};
+
+function lockIsEnabled() { return localStorage.getItem(LOCK_KEYS.enabled) === '1'; }
+
+function lockShow() {
+  const el = document.getElementById('lockScreen');
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.setAttribute('aria-hidden', 'false');
+}
+function lockHide() {
+  const el = document.getElementById('lockScreen');
+  if (!el) return;
+  el.classList.add('hidden');
+  el.setAttribute('aria-hidden', 'true');
+  const err = document.getElementById('lockErr');
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  const p = document.getElementById('lockPass'); if (p) p.value = '';
+}
+
+function lockStartSetup() {
+  lockShow();
+  document.getElementById('lockTitle').textContent = 'Enable password lock';
+  document.getElementById('lockSub').textContent = 'Set a password to protect your journal on this device.';
+  document.getElementById('lockSetMode').style.display = 'block';
+  document.getElementById('lockUnlockMode').style.display = 'none';
+  document.getElementById('lockNew1').value = '';
+  document.getElementById('lockNew2').value = '';
+  setTimeout(() => document.getElementById('lockNew1')?.focus(), 50);
+}
+
+function lockCancelSetup() {
+  // If the user requested lock but cancels, just proceed unlocked.
+  lockHide();
+}
+
+function lockToB64(bytes) {
+  let bin = '';
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+function lockFromB64(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+async function lockDeriveHash(password, saltBytes, iters) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: saltBytes, iterations: iters, hash: 'SHA-256' },
+    keyMaterial,
+    256
+  );
+  return new Uint8Array(bits);
+}
+
+function lockSetError(msg) {
+  const err = document.getElementById('lockErr');
+  if (!err) return;
+  err.style.display = 'block';
+  err.textContent = msg;
+}
+
+async function lockConfirmSetup() {
+  const p1 = document.getElementById('lockNew1').value || '';
+  const p2 = document.getElementById('lockNew2').value || '';
+  if (p1.length < 6) { lockSetError('Use at least 6 characters.'); return; }
+  if (p1 !== p2) { lockSetError('Passwords do not match.'); return; }
+
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const iters = 140000;
+  const hash = await lockDeriveHash(p1, salt, iters);
+
+  localStorage.setItem(LOCK_KEYS.enabled, '1');
+  localStorage.setItem(LOCK_KEYS.salt, lockToB64(salt));
+  localStorage.setItem(LOCK_KEYS.hash, lockToB64(hash));
+  localStorage.setItem(LOCK_KEYS.iters, String(iters));
+
+  document.getElementById('lockSetMode').style.display = 'none';
+  document.getElementById('lockUnlockMode').style.display = 'block';
+  document.getElementById('lockTitle').textContent = 'Unlock Journal Buddy';
+  document.getElementById('lockSub').textContent = 'Enter your password to continue.';
+  const err = document.getElementById('lockErr'); if (err) { err.style.display = 'none'; err.textContent = ''; }
+  const pass = document.getElementById('lockPass'); if (pass) { pass.value = ''; pass.focus(); }
+}
+
+function maybeShowLockOnStart() {
+  if (!lockIsEnabled()) return;
+  lockShow();
+  document.getElementById('lockTitle').textContent = 'Unlock Journal Buddy';
+  document.getElementById('lockSub').textContent = 'Enter your password to continue.';
+  document.getElementById('lockSetMode').style.display = 'none';
+  document.getElementById('lockUnlockMode').style.display = 'block';
+  setTimeout(() => document.getElementById('lockPass')?.focus(), 50);
+}
+
+async function unlockAttempt() {
+  if (!lockIsEnabled()) { lockHide(); return; }
+  const pass = document.getElementById('lockPass').value || '';
+  const saltB64 = localStorage.getItem(LOCK_KEYS.salt) || '';
+  const hashB64 = localStorage.getItem(LOCK_KEYS.hash) || '';
+  const iters = Number(localStorage.getItem(LOCK_KEYS.iters) || '140000');
+  if (!saltB64 || !hashB64) { lockSetError('Lock data missing. Disable by clearing local storage.'); return; }
+  const salt = lockFromB64(saltB64);
+  const expected = lockFromB64(hashB64);
+  const actual = await lockDeriveHash(pass, salt, iters);
+  let ok = expected.length === actual.length;
+  for (let i = 0; ok && i < expected.length; i++) ok = ok && (expected[i] === actual[i]);
+  if (!ok) { lockSetError('Incorrect password.'); return; }
+  lockHide();
 }
 
 // ── Dev mock (browser without Tauri) ─────────────────────────────────────────

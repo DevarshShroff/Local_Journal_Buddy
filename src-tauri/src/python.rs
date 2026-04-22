@@ -5,6 +5,8 @@
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Emitter, Manager};
+
+use crate::ollama_managed;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -98,6 +100,7 @@ impl PythonResolver {
                    .to_string(),
            )
            .env("PYTHONUNBUFFERED", "1")  // ensures stdout isn't buffered
+           .env("OLLAMA_URL", ollama_managed::effective_ollama_base())
            .stdout(Stdio::piped())
            .stderr(Stdio::piped());
 

@@ -29,13 +29,14 @@ pub fn use_managed_ollama() -> bool {
     {
         return false;
     }
+    // Default: managed Ollama in dev and release. Opt out with JOURNAL_BUDDY_MANAGED_OLLAMA=0|false.
     if std::env::var("JOURNAL_BUDDY_MANAGED_OLLAMA")
-        .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+        .map(|v| v == "0" || v.eq_ignore_ascii_case("false"))
         .unwrap_or(false)
     {
-        return true;
+        return false;
     }
-    !cfg!(debug_assertions)
+    true
 }
 
 pub fn effective_ollama_base() -> String {
@@ -282,7 +283,11 @@ async fn has_model(base: &str, model: &str) -> Result<bool, String> {
     let found = models.iter().any(|m| {
         m["name"]
             .as_str()
-            .map(|n| n == model || n.starts_with(&(model.to_string() + ":")) || n.contains("llama3")) // tolerate minor variants
+            .map(|n| {
+                n == model
+                    || n.starts_with(&(model.to_string() + ":"))
+                    || (n.contains("llama3") && n.contains("8b"))
+            })
             .unwrap_or(false)
     });
     Ok(found)
@@ -297,38 +302,41 @@ async fn pull_model(app: &AppHandle, bin: &Path, host: &str, models_dir: &Path, 
         false,
     );
 
-    let mut cmd = Command::new(bin);
-    cmd.arg("pull")
+    let start = std::time::Instant::now();
+    let out = Command::new(bin)
+        .arg("pull")
         .arg(model)
         .env("OLLAMA_HOST", host)
         .env("OLLAMA_MODELS", models_dir)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        .stderr(Stdio::piped())
+        .output()
+        .await
+        .map_err(|e| format!("ollama pull spawn: {e}"))?;
 
-    let mut child = cmd.spawn().map_err(|e| format!("spawn ollama pull: {e}"))?;
-    let start = std::time::Instant::now();
-
-    // We don’t have a stable machine-readable progress format here; show periodic “still working”.
-    loop {
-        tokio::select! {
-            res = child.wait() => {
-                let st = res.map_err(|e| e.to_string())?;
-                if st.success() { return Ok(()); }
-                return Err(format!("ollama pull exited with {st}"));
-            }
-            _ = tokio::time::sleep(Duration::from_secs(2)) => {
-                let secs = start.elapsed().as_secs();
-                emit_setup(
-                    app,
-                    "pulling",
-                    format!("Setting up local AI engine... installing {model} ({secs}s)"),
-                    98,
-                    false,
-                );
-            }
-        }
+    if out.status.success() {
+        let secs = start.elapsed().as_secs();
+        emit_setup(
+            app,
+            "pulling",
+            format!("Setting up local AI engine... {model} installed ({secs}s)"),
+            99,
+            false,
+        );
+        return Ok(());
     }
+
+    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
+    let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
+    let hint = if !stderr.is_empty() {
+        stderr
+    } else if !stdout.is_empty() {
+        stdout
+    } else {
+        format!("exit {}", out.status)
+    };
+    Err(format!("ollama pull failed: {}", hint.chars().take(500).collect::<String>()))
 }
 
 async fn spawn_ollama_process(bin: &Path, host: &str, models_dir: &Path) -> Result<Child, String> {
@@ -362,53 +370,50 @@ async fn start_managed_on_port(app: &AppHandle, bin: &Path) -> bool {
     let host = format!("127.0.0.1:{MANAGED_PORT}");
     let base = format!("http://{host}");
 
-    if ping_ollama(&base).await {
-        let _ = RESOLVED_URL.set(base.clone());
-        return true;
-    }
-
-    match spawn_ollama_process(bin, &host, &models_dir).await {
-        Ok(child) => {
-            *MANAGED_CHILD.lock().expect("lock") = Some(child);
-            WE_STARTED_OLLAMA.store(true, Ordering::SeqCst);
+    // If something is already listening, we still must verify the default model is present
+    // (early-return here used to skip `ollama pull`, which matches “waited forever” reports).
+    if !ping_ollama(&base).await {
+        match spawn_ollama_process(bin, &host, &models_dir).await {
+            Ok(child) => {
+                *MANAGED_CHILD.lock().expect("lock") = Some(child);
+                WE_STARTED_OLLAMA.store(true, Ordering::SeqCst);
+            }
+            Err(e) => {
+                eprintln!("journal-buddy: ollama serve spawn failed: {e}");
+                return false;
+            }
         }
-        Err(e) => {
-            eprintln!("journal-buddy: ollama serve spawn failed: {e}");
+
+        if !wait_ready(&base).await {
+            eprintln!("journal-buddy: managed Ollama did not become ready");
+            shutdown_managed_internal();
             return false;
         }
     }
 
-    if wait_ready(&base).await {
-        let _ = RESOLVED_URL.set(base.clone());
+    let _ = RESOLVED_URL.set(base.clone());
 
-        // Ensure the default model exists so the onboarding health check can go green without CLI steps.
-        match has_model(&base, DEFAULT_MODEL).await {
-            Ok(true) => true,
-            Ok(false) => {
-                match pull_model(app, bin, &host, &models_dir, DEFAULT_MODEL).await {
-                    Ok(()) => true,
-                    Err(e) => {
-                        eprintln!("journal-buddy: model pull failed: {e}");
-                        emit_setup(
-                            app,
-                            "error",
-                            format!("Could not install {DEFAULT_MODEL}: {e}"),
-                            0,
-                            true,
-                        );
-                        true // Ollama is up; model may be installed later.
-                    }
-                }
-            }
+    // Ensure the default model exists so the onboarding health check can go green without CLI steps.
+    match has_model(&base, DEFAULT_MODEL).await {
+        Ok(true) => true,
+        Ok(false) => match pull_model(app, bin, &host, &models_dir, DEFAULT_MODEL).await {
+            Ok(()) => true,
             Err(e) => {
-                eprintln!("journal-buddy: tag check failed: {e}");
-                true
+                eprintln!("journal-buddy: model pull failed: {e}");
+                emit_setup(
+                    app,
+                    "error",
+                    format!("Could not install {DEFAULT_MODEL}: {e}"),
+                    0,
+                    true,
+                );
+                true // Ollama is up; user may retry after fixing network/disk.
             }
+        },
+        Err(e) => {
+            eprintln!("journal-buddy: tag check failed: {e}");
+            true
         }
-    } else {
-        eprintln!("journal-buddy: managed Ollama did not become ready");
-        shutdown_managed_internal();
-        false
     }
 }
 

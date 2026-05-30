@@ -157,26 +157,99 @@ def cmd_ingest_text(text: str, date: str, as_json: bool, source_hint: str | None
     return 0
 
 
+def _recent_entry_snippets(*, limit: int = 8, max_chars: int = 700) -> list[dict]:
+    """SQLite-backed fallback when vector search returns nothing useful."""
+    conn = connect()
+    init_db(conn)
+    snippets: list[dict] = []
+    for entry in sql_list_entries(conn)[: int(limit)]:
+        row = get_entry_by_id(conn, entry.id)
+        if row is None:
+            continue
+        raw = Path(str(row["raw_text_path"]))
+        if not raw.is_file():
+            text = (entry.preview or "").strip()
+        else:
+            try:
+                text = raw.read_text(encoding="utf-8").strip()
+            except OSError:
+                text = (entry.preview or "").strip()
+        if not text:
+            continue
+        if len(text) > max_chars:
+            text = text[:max_chars].rstrip() + "…"
+        snippets.append(
+            {
+                "text": text,
+                "metadata": {
+                    "date": entry.date,
+                    "source_path": entry.source_path,
+                    "entry_id": int(entry.id),
+                    "fallback": "recent",
+                },
+                "distance": None,
+            }
+        )
+    return snippets
+
+
 def cmd_query(text: str, top_k: int, as_json: bool) -> int:
     errors: list[str] = []
+    results: list[dict] = []
     try:
         import chromadb  # type: ignore
     except Exception as e:
         errors.append(f"chromadb import failed: {e}")
         if as_json:
-            _print_json({"results": [], "errors": errors})
+            _print_json({"results": _recent_entry_snippets(limit=max(4, top_k)), "errors": errors})
         return 2
 
     try:
         embedder = default_embedder()
         client = chromadb.PersistentClient(path=str(chroma_dir()))
         collection = client.get_or_create_collection(name="journal_chunks", metadata={"hnsw:space": "cosine"})
+        count = int(collection.count())
+        if count == 0:
+            results = _recent_entry_snippets(limit=max(4, top_k))
+            if as_json:
+                _print_json({"results": results, "errors": errors})
+            else:
+                for r in results:
+                    sys.stdout.write(r["text"] + "\n\n")
+            return 0
+
         q_emb = embedder.embed([text])[0]
-        res = collection.query(query_embeddings=[q_emb], n_results=int(top_k), include=["documents", "metadatas", "distances"])
-        # chroma returns lists-of-lists
-        results = []
-        for doc, meta, dist in zip(res.get("documents", [[]])[0], res.get("metadatas", [[]])[0], res.get("distances", [[]])[0]):
+        res = collection.query(
+            query_embeddings=[q_emb],
+            n_results=int(top_k),
+            include=["documents", "metadatas", "distances"],
+        )
+        for doc, meta, dist in zip(
+            res.get("documents", [[]])[0],
+            res.get("metadatas", [[]])[0],
+            res.get("distances", [[]])[0],
+        ):
             results.append({"text": doc, "metadata": meta, "distance": dist})
+
+        # Weak semantic hits (or none) — blend in recent journal text so Sage isn't blind.
+        weak = (not results) or all(
+            (r.get("distance") is not None) and float(r["distance"]) > 0.85 for r in results
+        )
+        if weak:
+            seen: set[str] = set()
+            merged: list[dict] = []
+            for r in results:
+                key = str(r.get("text", ""))[:80]
+                if key and key not in seen:
+                    seen.add(key)
+                    merged.append(r)
+            for r in _recent_entry_snippets(limit=max(4, top_k)):
+                key = str(r.get("text", ""))[:80]
+                if key and key not in seen:
+                    seen.add(key)
+                    merged.append(r)
+            results = merged[: max(int(top_k), 6)]
+
         if as_json:
             _print_json({"results": results, "errors": errors})
         else:
@@ -185,9 +258,10 @@ def cmd_query(text: str, top_k: int, as_json: bool) -> int:
         return 0
     except Exception as e:
         errors.append(str(e))
+        fallback = _recent_entry_snippets(limit=max(4, top_k))
         if as_json:
-            _print_json({"results": [], "errors": errors})
-        return 2
+            _print_json({"results": fallback, "errors": errors})
+        return 2 if not fallback else 0
 
 
 def _delete_chroma_for_entry_id(entry_id: int) -> list[str]:

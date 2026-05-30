@@ -16,7 +16,7 @@
 
   <!-- Disable App Sandbox for local subprocess spawning (Python sidecar) -->
   <!-- NOTE: sandboxed apps cannot spawn arbitrary processes.         -->
-  <!-- For a personal-use app, disabling sandbox is the correct call. -->
+  <!-- Sandboxing disabled so bundled Python and local Ollama can run reliably. -->
   <key>com.apple.security.app-sandbox</key>
   <false/>
 </dict>

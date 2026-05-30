@@ -10,7 +10,7 @@ from typing import Any, Iterable
 from paths import app_support_dir, ensure_dir
 
 
-APP_NAME = "SovereignJournal"
+APP_NAME = "JournalBuddy"
 
 
 def utc_now_iso() -> str:
@@ -18,8 +18,8 @@ def utc_now_iso() -> str:
 
 
 def base_dir() -> Path:
-    # Allow overriding for tests / dev.
-    override = os.environ.get("SOVEREIGNJOURNAL_DIR")
+    # Allow overriding for tests / dev (legacy env name still supported).
+    override = os.environ.get("JOURNAL_BUDDY_DATA_DIR") or os.environ.get("SOVEREIGNJOURNAL_DIR")
     if override:
         return ensure_dir(Path(override))
     # In sandboxed environments we might not be allowed to create under ~/Library.
@@ -92,7 +92,7 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def save_entry_text(*, date: str, source_path: str, text: str) -> Path:
-    # Store under ~/Library/Application Support/SovereignJournal/entries/YYYY-MM-DD/<stem>.txt
+    # Store under ~/Library/Application Support/JournalBuddy/entries/YYYY-MM-DD/<stem>.txt
     ddir = ensure_dir(entries_dir() / date)
     stem = Path(source_path).stem or "entry"
     safe_stem = "".join(c for c in stem if c.isalnum() or c in ("-", "_"))[:80] or "entry"

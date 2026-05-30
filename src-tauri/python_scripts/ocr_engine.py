@@ -21,8 +21,9 @@ def utc_now_iso() -> str:
 
 
 def _default_output_dir() -> Path:
-    # Architecture spec: ~/Library/Application Support/SovereignJournal/
-    return ensure_dir(app_support_dir("SovereignJournal") / "ocr")
+    from paths import APP_DATA_DIR_NAME
+
+    return ensure_dir(app_support_dir(APP_DATA_DIR_NAME) / "ocr")
 
 
 def _save_txt(text: str, *, image_path: str, out_dir: Path) -> Path:

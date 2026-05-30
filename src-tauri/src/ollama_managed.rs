@@ -21,6 +21,8 @@ const DEFAULT_MODEL: &str = "llama3:8b";
 static RESOLVED_URL: OnceLock<String> = OnceLock::new();
 static MANAGED_CHILD: Mutex<Option<Child>> = Mutex::new(None);
 static WE_STARTED_OLLAMA: AtomicBool = AtomicBool::new(false);
+static MODEL_PULL_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+static LAST_SETUP_MESSAGE: Mutex<String> = Mutex::new(String::new());
 
 pub fn use_managed_ollama() -> bool {
     if std::env::var("JOURNAL_BUDDY_USE_SYSTEM_OLLAMA")
@@ -39,11 +41,58 @@ pub fn use_managed_ollama() -> bool {
     true
 }
 
+pub fn managed_ollama_base() -> String {
+    format!("http://127.0.0.1:{MANAGED_PORT}")
+}
+
+/// Call from `setup` before async init so health checks hit the managed port immediately.
+pub fn prime_ollama_base_url() {
+    let url = if use_managed_ollama() {
+        managed_ollama_base()
+    } else {
+        "http://127.0.0.1:11434".to_string()
+    };
+    let _ = RESOLVED_URL.set(url);
+}
+
 pub fn effective_ollama_base() -> String {
-    RESOLVED_URL
-        .get()
-        .cloned()
-        .unwrap_or_else(|| "http://127.0.0.1:11434".to_string())
+    RESOLVED_URL.get().cloned().unwrap_or_else(|| {
+        if use_managed_ollama() {
+            managed_ollama_base()
+        } else {
+            "http://127.0.0.1:11434".to_string()
+        }
+    })
+}
+
+pub fn last_setup_message() -> String {
+    LAST_SETUP_MESSAGE
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or_default()
+}
+
+/// True when Ollama's `/api/tags` lists a usable llama3 8B variant.
+pub fn model_name_matches(name: &str) -> bool {
+    let n = name.trim();
+    n == DEFAULT_MODEL
+        || n.starts_with(&format!("{DEFAULT_MODEL}:"))
+        || (n.contains("llama3") && n.contains("8b"))
+}
+
+pub fn model_present_in_tags_json(body: &str) -> bool {
+    serde_json::from_str::<serde_json::Value>(body)
+        .ok()
+        .and_then(|json| json["models"].as_array().cloned())
+        .map(|models| {
+            models.iter().any(|m| {
+                m["name"]
+                    .as_str()
+                    .map(model_name_matches)
+                    .unwrap_or(false)
+            })
+        })
+        .unwrap_or(false)
 }
 
 fn bundle_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -83,6 +132,9 @@ struct OllamaSetupPayload {
 }
 
 fn emit_setup(app: &AppHandle, stage: &str, message: String, pct: i32, done: bool) {
+    if let Ok(mut g) = LAST_SETUP_MESSAGE.lock() {
+        *g = message.clone();
+    }
     let payload = OllamaSetupPayload {
         stage: stage.to_string(),
         message,
@@ -267,9 +319,9 @@ fn find_system_ollama_linux() -> Option<PathBuf> {
     None
 }
 
-async fn has_model(base: &str, model: &str) -> Result<bool, String> {
+async fn has_model(base: &str, _model: &str) -> Result<bool, String> {
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(1200))
+        .timeout(Duration::from_millis(2500))
         .build()
         .map_err(|e| e.to_string())?;
     let url = format!("{}/api/tags", base.trim_end_matches('/'));
@@ -278,22 +330,45 @@ async fn has_model(base: &str, model: &str) -> Result<bool, String> {
         return Err(format!("tags HTTP {}", resp.status()));
     }
     let body = resp.text().await.map_err(|e| e.to_string())?;
-    let json = serde_json::from_str::<serde_json::Value>(&body).map_err(|e| e.to_string())?;
-    let models = json["models"].as_array().cloned().unwrap_or_default();
-    let found = models.iter().any(|m| {
-        m["name"]
-            .as_str()
-            .map(|n| {
-                n == model
-                    || n.starts_with(&(model.to_string() + ":"))
-                    || (n.contains("llama3") && n.contains("8b"))
-            })
-            .unwrap_or(false)
-    });
-    Ok(found)
+    Ok(model_present_in_tags_json(&body))
 }
 
-async fn pull_model(app: &AppHandle, bin: &Path, host: &str, models_dir: &Path, model: &str) -> Result<(), String> {
+async fn pull_model(app: &AppHandle, base: &str, model: &str) -> Result<(), String> {
+    if has_model(base, model).await.unwrap_or(false) {
+        emit_setup(
+            app,
+            "ready",
+            format!("Local AI engine ready — {model} installed"),
+            100,
+            true,
+        );
+        return Ok(());
+    }
+
+    if MODEL_PULL_IN_PROGRESS
+        .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Ok(());
+    }
+
+    let result = pull_model_via_api(app, base, model).await;
+    MODEL_PULL_IN_PROGRESS.store(false, Ordering::SeqCst);
+    result
+}
+
+async fn pull_model_via_api(app: &AppHandle, base: &str, model: &str) -> Result<(), String> {
+    if has_model(base, model).await.unwrap_or(false) {
+        emit_setup(
+            app,
+            "ready",
+            format!("Local AI engine ready — {model} installed"),
+            100,
+            true,
+        );
+        return Ok(());
+    }
+
     emit_setup(
         app,
         "pulling",
@@ -302,41 +377,133 @@ async fn pull_model(app: &AppHandle, bin: &Path, host: &str, models_dir: &Path, 
         false,
     );
 
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(7200))
+        .build()
+        .map_err(|e| e.to_string())?;
+    let url = format!("{}/api/pull", base.trim_end_matches('/'));
+    let body = serde_json::json!({ "name": model, "stream": true });
     let start = std::time::Instant::now();
-    let out = Command::new(bin)
-        .arg("pull")
-        .arg(model)
-        .env("OLLAMA_HOST", host)
-        .env("OLLAMA_MODELS", models_dir)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await
-        .map_err(|e| format!("ollama pull spawn: {e}"))?;
 
-    if out.status.success() {
-        let secs = start.elapsed().as_secs();
-        emit_setup(
-            app,
-            "pulling",
-            format!("Setting up local AI engine... {model} installed ({secs}s)"),
-            99,
-            false,
-        );
-        return Ok(());
+    let resp = client
+        .post(&url)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("api pull request: {e}"))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("api pull HTTP {}", resp.status()));
     }
 
-    let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
-    let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
-    let hint = if !stderr.is_empty() {
-        stderr
-    } else if !stdout.is_empty() {
-        stdout
-    } else {
-        format!("exit {}", out.status)
+    let mut stream = resp.bytes_stream();
+    let mut pending = String::new();
+    while let Some(chunk) = stream.next().await {
+        let bytes = chunk.map_err(|e| e.to_string())?;
+        pending.push_str(&String::from_utf8_lossy(&bytes));
+        while let Some(pos) = pending.find('\n') {
+            let line: String = pending.drain(..=pos).collect();
+            let line = line.trim();
+            if line.is_empty() {
+                continue;
+            }
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(line) {
+                if has_model(base, model).await.unwrap_or(false) {
+                    let secs = start.elapsed().as_secs();
+                    emit_setup(
+                        app,
+                        "ready",
+                        format!("Local AI engine ready — {model} installed ({secs}s)"),
+                        100,
+                        true,
+                    );
+                    return Ok(());
+                }
+                if let Some(status) = v["status"].as_str() {
+                    let secs = start.elapsed().as_secs();
+                    emit_setup(
+                        app,
+                        "pulling",
+                        format!("Setting up local AI engine... {status} ({secs}s)"),
+                        98,
+                        false,
+                    );
+                }
+                if let Some(err) = v["error"].as_str() {
+                    return Err(err.to_string());
+                }
+            }
+        }
+    }
+
+    if !has_model(base, model).await.unwrap_or(false) {
+        return Err("model pull finished but llama3:8b is not listed yet".into());
+    }
+
+    let secs = start.elapsed().as_secs();
+    emit_setup(
+        app,
+        "ready",
+        format!("Local AI engine ready — {model} installed ({secs}s)"),
+        100,
+        true,
+    );
+    Ok(())
+}
+
+/// Retry model install when onboarding sees Ollama up but the model tag is missing.
+pub fn schedule_ensure_default_model(app: AppHandle) {
+    if !use_managed_ollama() {
+        return;
+    }
+    if MODEL_PULL_IN_PROGRESS.load(Ordering::SeqCst) {
+        return;
+    }
+    tauri::async_runtime::spawn(async move {
+        let _ = ensure_default_model(&app).await;
+    });
+}
+
+pub async fn ensure_default_model(app: &AppHandle) -> bool {
+    if !use_managed_ollama() {
+        return false;
+    }
+    let base = effective_ollama_base();
+    if !ping_ollama(&base).await {
+        return false;
+    }
+    match has_model(&base, DEFAULT_MODEL).await {
+        Ok(true) => return true,
+        Ok(false) => {}
+        Err(e) => {
+            eprintln!("journal-buddy: ensure model tag check: {e}");
+            return false;
+        }
+    }
+
+    let dir = match bundle_dir(app) {
+        Ok(d) => d,
+        Err(_) => return false,
     };
-    Err(format!("ollama pull failed: {}", hint.chars().take(500).collect::<String>()))
+    let bin = ollama_binary_path(&dir);
+    if !bin.exists() {
+        return false;
+    }
+
+    match pull_model(app, &base, DEFAULT_MODEL).await {
+        Ok(()) => true,
+        Err(e) => {
+            eprintln!("journal-buddy: ensure model pull: {e}");
+            emit_setup(
+                app,
+                "error",
+                format!("Could not install {DEFAULT_MODEL}: {e}"),
+                0,
+                true,
+            );
+            false
+        }
+    }
 }
 
 async fn spawn_ollama_process(bin: &Path, host: &str, models_dir: &Path) -> Result<Child, String> {
@@ -396,7 +563,7 @@ async fn start_managed_on_port(app: &AppHandle, bin: &Path) -> bool {
     // Ensure the default model exists so the onboarding health check can go green without CLI steps.
     match has_model(&base, DEFAULT_MODEL).await {
         Ok(true) => true,
-        Ok(false) => match pull_model(app, bin, &host, &models_dir, DEFAULT_MODEL).await {
+        Ok(false) => match pull_model(app, &base, DEFAULT_MODEL).await {
             Ok(()) => true,
             Err(e) => {
                 eprintln!("journal-buddy: model pull failed: {e}");
@@ -418,14 +585,10 @@ async fn start_managed_on_port(app: &AppHandle, bin: &Path) -> bool {
 }
 
 pub async fn initialize(app: &AppHandle) {
+    prime_ollama_base_url();
     if !use_managed_ollama() {
-        let _ = RESOLVED_URL.set("http://127.0.0.1:11434".to_string());
         return;
     }
-
-    // Prefer the managed base immediately so all callers point at the same local endpoint.
-    let managed_base = format!("http://127.0.0.1:{MANAGED_PORT}");
-    let _ = RESOLVED_URL.set(managed_base.clone());
 
     let dir = match bundle_dir(app) {
         Ok(d) => d,

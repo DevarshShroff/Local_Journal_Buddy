@@ -1,20 +1,33 @@
 # Python
 .venv/
+venv/
 __pycache__/
+*.py[cod]
 *.pyc
 *.pyo
-
-# Conda
 .conda/
 
-# Journal data — PRIVATE
+# Bundled runtime (rebuild with bundle_python.sh)
+src-tauri/python/
+
+# Journal & user data — never commit
 journals/
 output/
+.tmp_sovereign/
+*.sqlite
+*.sqlite3
+*.db
+chroma*/
+chromadb*/
+data/
+storage/
+
+# Media / extracted text from local testing
 *.jpg
 *.jpeg
 *.png
 *.heic
-*.txt          # extracted journal text
+*.txt
 
 # OS
 .DS_Store
@@ -25,40 +38,19 @@ dist/
 build/
 .vite/
 .parcel-cache/
-*.log
 
-# Tauri/Rust
+# Tauri / Rust build artifacts (includes .dmg, .app)
 src-tauri/target/
 src-tauri/gen/
+*.dmg
 
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-*.pyc
-
-
-*.log
 # Env / secrets
 .env
 .env.*
 *.pem
 *.key
+*.log
 
-# Editor (optional)
+# IDE
 .idea/
 .vscode/
-node_modules/
-
-# App data (adjust names to your project)
-*.sqlite
-*.sqlite3
-*.db
-chroma*/
-chromadb*/
-data/
-storage/
-dist/
-build/
-src-tauri/python/

@@ -788,6 +788,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   document.getElementById('welcomeTime').textContent = now();
+  loadChatHistory();
   buildCalendar([]);
   runHealthCheck();
   startHealthPolling();
@@ -812,9 +813,7 @@ async function runHealthCheck() {
   try {
     // Avoid flicker: only update rows when values change.
 
-    const status = await invokeWithTimeout('health_check', {}, 3000);
-    console.log('[JournalBuddy] health_check', status);
-
+    const status = await invokeWithTimeout('health_check', {}, 10000);
     const next = {
       python_ok: !!status.python_ok,
       python_version: status.python_version || 'Not found',
@@ -856,6 +855,7 @@ async function runHealthCheck() {
     // (Ollama/Model can be treated as "soft" requirements if you want, but by default we require them.)
     const canContinue = !!(status.python_ok && status.db_ok && status.ollama_ok && status.model_ok);
     document.getElementById('onboard-continue').disabled = !canContinue;
+    if (status.ollama_ok && status.model_ok) hideSetupBanner();
 
     // Update chat online dot
     document.getElementById('onlineDot').style.background = status.ollama_ok && status.model_ok ? '#61A641' : '#F2D16D';
@@ -863,7 +863,7 @@ async function runHealthCheck() {
       `your private journal companion · ${status.db_entry_count} entries indexed`;
 
   } catch(e) {
-    console.error('[JournalBuddy] health_check failed', e);
+    // Health check failed (backend not ready or invoke timeout)
     document.getElementById('onboard-errors').style.display = 'block';
     document.getElementById('onboard-errors').textContent =
       'Health check failed. Ensure the Tauri backend is running, then relaunch.';
@@ -896,13 +896,20 @@ function updateCheck(id, ok, detail) {
   det.textContent = detail;
 }
 
+function hideSetupBanner() {
+  const b = document.getElementById('setupBanner');
+  if (b) b.classList.remove('show');
+}
+
 function skipOnboarding() {
   document.getElementById('onboarding').classList.add('hidden');
+  hideSetupBanner();
   maybeShowLockOnStart();
 }
 function finishOnboarding() {
   const wantsLock = !!document.getElementById('lockEnableToggle')?.checked;
   document.getElementById('onboarding').classList.add('hidden');
+  hideSetupBanner();
   if (wantsLock && !lockIsEnabled()) {
     lockStartSetup();
     return;
@@ -1287,15 +1294,23 @@ if (isTauriEnv()) {
     const f = document.getElementById('setupFill');
     if (!b || !t || !p || !f) return;
 
+    const onboarding = document.getElementById('onboarding');
+    const onboardingVisible = onboarding && !onboarding.classList.contains('hidden');
+
     const msg = data && data.message ? String(data.message) : 'Setting up local AI engine…';
     const pct = data && typeof data.pct === 'number' ? data.pct : 0;
     const done = !!(data && data.done);
 
-    t.textContent = msg;
-    p.textContent = `${pct}%`;
-    f.style.width = `${Math.max(0, Math.min(100, pct))}%`;
-    b.classList.add('show');
-    if (done) setTimeout(() => b.classList.remove('show'), 1200);
+    if (!onboardingVisible || done) {
+      hideSetupBanner();
+    } else {
+      t.textContent = msg;
+      p.textContent = `${pct}%`;
+      f.style.width = `${Math.max(0, Math.min(100, pct))}%`;
+      b.classList.add('show');
+      const det = document.getElementById('chk-model-detail');
+      if (det) det.textContent = msg;
+    }
   });
 }
 
@@ -1375,13 +1390,43 @@ async function startBatch(folderPath, files) {
 }
 
 // ── Chat ──────────────────────────────────────────────────────────────────────
+/** @type {{role:'user'|'assistant',content:string}[]} */
+let chatHistory = [];
+const CHAT_HISTORY_MAX_TURNS = 12;
+
+function loadChatHistory() {
+  try {
+    const raw = sessionStorage.getItem('journalBuddyChatHistory');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) chatHistory = parsed.slice(-CHAT_HISTORY_MAX_TURNS);
+  } catch (_) { /* ignore */ }
+}
+
+function saveChatHistory() {
+  try {
+    sessionStorage.setItem('journalBuddyChatHistory', JSON.stringify(chatHistory.slice(-CHAT_HISTORY_MAX_TURNS)));
+  } catch (_) { /* ignore */ }
+}
+
+function pushChatTurn(role, content) {
+  const text = String(content || '').trim();
+  if (!text) return;
+  chatHistory.push({ role, content: text });
+  if (chatHistory.length > CHAT_HISTORY_MAX_TURNS) {
+    chatHistory = chatHistory.slice(-CHAT_HISTORY_MAX_TURNS);
+  }
+  saveChatHistory();
+}
+
 function setupStreamListeners() {
   if (!isTauriEnv()) return;
   listen('brain-token', token => appendToken(token));
-  listen('brain-done', () => finishStream());
+  listen('brain-done', meta => finishStream(meta));
 }
 
 let streamBubble = null;
+let streamBubbleWrap = null;
 
 /**
  * @param {string} displayText - Shown in the chat bubble (keep short; no private journal body).
@@ -1390,15 +1435,19 @@ let streamBubble = null;
 function sendBrainRequest(displayText, questionForModel) {
   document.getElementById('suggestedPrompts').style.display = 'none';
   appendMessage('user', displayText);
+  pushChatTurn('user', questionForModel !== undefined && questionForModel !== null ? questionForModel : displayText);
   startLoading();
   const q = questionForModel !== undefined && questionForModel !== null ? questionForModel : displayText;
+  const history = chatHistory.slice(0, -1);
 
   if (isTauriEnv()) {
-    invoke('ask_brain_stream', { question: q, topK: 4 })
-      .catch(e => { hideLoading(); appendMessage('ai', '⚠ Error: ' + e); });
+    invoke('ask_brain_stream', { question: q, topK: 8, history })
+      .catch(e => { hideLoading(); appendMessage('ai', '⚠ Error: ' + e); pushChatTurn('assistant', '⚠ Error: ' + e); });
   } else {
     hideLoading();
-    appendMessage('ai', 'Sage runs inside the Journal Buddy desktop app with your local journal and Ollama. Open the app with Tauri to chat here—this browser preview does not call your real data.');
+    const mock = 'Sage runs inside the Journal Buddy desktop app with your local journal and Ollama. Open the app with Tauri to chat here—this browser preview does not call your real data.';
+    appendMessage('ai', mock);
+    pushChatTurn('assistant', mock);
   }
 }
 
@@ -1435,14 +1484,37 @@ function appendMessage(role, text, sources) {
 function appendToken(token) {
   if (!streamBubble) {
     hideLoading();
-    streamBubble = appendMessage('ai', '');
+    const el = appendMessage('ai', '');
+    streamBubble = el;
+    streamBubbleWrap = el && el.closest('.msg-body');
   }
   streamBubble.textContent += token;
   document.getElementById('chatMessages').scrollTop = 999999;
 }
 
-function finishStream() {
+function finishStream(meta) {
+  const answer = streamBubble ? streamBubble.textContent.trim() : '';
+  if (answer) pushChatTurn('assistant', answer);
+
+  if (streamBubbleWrap && meta && Array.isArray(meta.context_dates) && meta.context_dates.length) {
+    const chips = meta.context_dates.map(d => `<span class="source-chip">📖 ${d}</span>`).join('');
+    const existing = streamBubbleWrap.querySelector('.msg-sources');
+    if (!existing) {
+      const src = document.createElement('div');
+      src.className = 'msg-sources';
+      src.innerHTML = chips;
+      streamBubbleWrap.appendChild(src);
+    }
+  }
+  if (meta && meta.chunks_used === 0 && streamBubbleWrap) {
+    const hint = document.createElement('div');
+    hint.className = 'msg-sources';
+    hint.innerHTML = '<span class="source-chip">No journal excerpts matched — write or import entries for richer answers</span>';
+    if (!streamBubbleWrap.querySelector('.msg-sources')) streamBubbleWrap.appendChild(hint);
+  }
+
   streamBubble = null;
+  streamBubbleWrap = null;
   isLoading = false;
   document.getElementById('sendBtn').disabled = false;
 }

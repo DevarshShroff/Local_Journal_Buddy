@@ -1,98 +1,96 @@
 // src-tauri/src/health.rs
 // Checks Python, Ollama, model availability, and ChromaDB on first launch
 
-use tauri::AppHandle;
-use crate::{HealthStatus, ollama_managed, python};
+use crate::{ollama_managed, python, HealthStatus};
 use std::time::Duration;
+use tauri::AppHandle;
 
-pub async fn check_all(app: &AppHandle) -> Result<HealthStatus, String> {
-    let py = python::resolver(app);
-    let mut status = HealthStatus {
-        python_ok: false,
-        ollama_ok: false,
-        model_ok: false,
-        db_ok: false,
-        db_entry_count: 0,
-        python_version: String::new(),
-        model_name: "llama3:8b".into(),
-        errors: Vec::new(),
-    };
-
-    // ── Check Python ──────────────────────────────────────────────────────────
+async fn check_python(py: &python::PythonResolver) -> (bool, String, Option<String>) {
     let out = tokio::time::timeout(
         Duration::from_millis(1200),
-        tokio::process::Command::new(py.python_bin()).arg("--version").output(),
+        tokio::process::Command::new(py.python_bin())
+            .arg("--version")
+            .output(),
     )
     .await;
+
     match out {
         Ok(Ok(o)) if o.status.success() => {
-            status.python_ok = true;
             let stdout = String::from_utf8_lossy(&o.stdout);
             let stderr = String::from_utf8_lossy(&o.stderr);
-            status.python_version = stdout.trim().to_string();
-            if status.python_version.is_empty() {
-                status.python_version = stderr.trim().to_string();
+            let mut version = stdout.trim().to_string();
+            if version.is_empty() {
+                version = stderr.trim().to_string();
             }
+            (true, version, None)
         }
-        Ok(Ok(o)) => status.errors.push(format!(
-            "Python check failed (exit {}): {}",
-            o.status,
-            String::from_utf8_lossy(&o.stderr).trim()
-        )),
-        Ok(Err(e)) => status.errors.push(format!("Python check failed: {e}")),
-        Err(_) => status.errors.push("Python check timed out".into()),
-    };
+        Ok(Ok(o)) => (
+            false,
+            String::new(),
+            Some(format!(
+                "Python check failed (exit {}): {}",
+                o.status,
+                String::from_utf8_lossy(&o.stderr).trim()
+            )),
+        ),
+        Ok(Err(e)) => (false, String::new(), Some(format!("Python check failed: {e}"))),
+        Err(_) => (false, String::new(), Some("Python check timed out".into())),
+    }
+}
 
-    // ── Check Ollama reachability ─────────────────────────────────────────────
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_millis(800))
+async fn check_ollama_and_model() -> (bool, bool, Vec<String>) {
+    let mut errors = Vec::new();
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_millis(2500))
         .build()
-        .map_err(|e| format!("Failed to build HTTP client: {e}"))?;
-
-    let ollama_base = ollama_managed::effective_ollama_base();
-    let tags_url = format!("{}/api/tags", ollama_base.trim_end_matches('/'));
-    match client.get(tags_url).send().await {
-        Ok(resp) if resp.status().is_success() => {
-            status.ollama_ok = true;
-
-            // Check model is pulled
-            match resp.text().await {
-                Ok(body) => {
-                    if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
-                        let models = json["models"].as_array();
-                        let model_found = models
-                            .map(|ms| {
-                                ms.iter().any(|m| {
-                                    m["name"]
-                                        .as_str()
-                                        .map(|n| n.contains("llama3:8b") || n == "llama3:8b")
-                                        .unwrap_or(false)
-                                })
-                            })
-                            .unwrap_or(false);
-
-                        status.model_ok = model_found;
-                        // If missing, the managed Ollama installer will attempt to pull it automatically on first run.
-                    } else {
-                        status.errors.push("Ollama responded but JSON was invalid".into());
-                    }
-                }
-                Err(e) => status.errors.push(format!("Ollama response read failed: {e}")),
-            }
-        }
-        Ok(resp) => {
-            status.errors.push(format!("Ollama returned HTTP {}", resp.status()));
-        }
-        Err(_) => {
-            // Important: never block onboarding on this.
-            status.errors.push(format!(
-                "Ollama not reachable at {}. If you use your own install, set JOURNAL_BUDDY_USE_SYSTEM_OLLAMA=1 and run `ollama serve`.",
-                ollama_base
-            ));
+    {
+        Ok(c) => c,
+        Err(e) => {
+            errors.push(format!("Failed to build HTTP client: {e}"));
+            return (false, false, errors);
         }
     };
 
-    // ── Check ChromaDB / journal DB ───────────────────────────────────────────
+    let mut bases = vec![ollama_managed::effective_ollama_base()];
+    if ollama_managed::use_managed_ollama() {
+        let managed = ollama_managed::managed_ollama_base();
+        if !bases.iter().any(|b| b == &managed) {
+            bases.push(managed);
+        }
+    }
+
+    for base in bases {
+        let tags_url = format!("{}/api/tags", base.trim_end_matches('/'));
+        match client.get(&tags_url).send().await {
+            Ok(resp) if resp.status().is_success() => {
+                match resp.text().await {
+                    Ok(body) => {
+                        let model_found = ollama_managed::model_present_in_tags_json(&body);
+                        return (true, model_found, errors);
+                    }
+                    Err(e) => errors.push(format!("Ollama response read failed ({base}): {e}")),
+                }
+            }
+            Ok(resp) => errors.push(format!("Ollama returned HTTP {} at {base}", resp.status())),
+            Err(_) => errors.push(format!("Ollama not reachable at {base}")),
+        }
+    }
+
+    if ollama_managed::use_managed_ollama() {
+        let hint = ollama_managed::last_setup_message();
+        if !hint.is_empty() {
+            errors.push(hint);
+        }
+    } else {
+        errors.push(
+            "Ollama not reachable. Set JOURNAL_BUDDY_USE_SYSTEM_OLLAMA=1 and run `ollama serve`, or use the bundled engine.".into(),
+        );
+    }
+
+    (false, false, errors)
+}
+
+async fn check_db(_app: &AppHandle, py: &python::PythonResolver) -> (bool, i32, Option<String>) {
     match tokio::time::timeout(
         Duration::from_millis(2000),
         py.run_text("librarian.py", &["--count-entries", "--json"], None),
@@ -101,15 +99,56 @@ pub async fn check_all(app: &AppHandle) -> Result<HealthStatus, String> {
     {
         Ok(Ok(output)) => {
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&output) {
-                status.db_ok = true;
-                status.db_entry_count = json["entry_count"].as_i64().unwrap_or(0) as i32;
+                let count = json["entry_count"].as_i64().unwrap_or(0) as i32;
+                (true, count, None)
             } else {
-                status.errors.push("DB check returned invalid JSON".into());
+                (false, 0, Some("DB check returned invalid JSON".into()))
             }
         }
-        Ok(Err(e)) => status.errors.push(format!("DB check failed: {e}")),
-        Err(_) => status.errors.push("DB check timed out".into()),
-    };
+        Ok(Err(e)) => (false, 0, Some(format!("DB check failed: {e}"))),
+        Err(_) => (false, 0, Some("DB check timed out".into())),
+    }
+}
 
-    Ok(status)
+pub async fn check_all(app: &AppHandle) -> Result<HealthStatus, String> {
+    let py = python::resolver(app);
+
+    let py_fut = check_python(&py);
+    let ollama_fut = check_ollama_and_model();
+    let db_fut = check_db(app, &py);
+
+    let ((python_ok, python_version, py_err), (ollama_ok, model_ok, mut ollama_errs), (db_ok, db_entry_count, db_err)) =
+        tokio::join!(py_fut, ollama_fut, db_fut);
+
+    let mut errors = Vec::new();
+    if let Some(e) = py_err {
+        errors.push(e);
+    }
+    errors.append(&mut ollama_errs);
+    if let Some(e) = db_err {
+        errors.push(e);
+    }
+
+    if ollama_ok && !model_ok && ollama_managed::use_managed_ollama() {
+        let setup = ollama_managed::last_setup_message();
+        if setup.is_empty() {
+            errors.push(format!(
+                "Downloading {} to {} — this can take several minutes on first launch.",
+                "llama3:8b",
+                ollama_managed::effective_ollama_base()
+            ));
+        }
+        ollama_managed::schedule_ensure_default_model(app.clone());
+    }
+
+    Ok(HealthStatus {
+        python_ok,
+        ollama_ok,
+        model_ok,
+        db_ok,
+        db_entry_count,
+        python_version,
+        model_name: "llama3:8b".into(),
+        errors,
+    })
 }

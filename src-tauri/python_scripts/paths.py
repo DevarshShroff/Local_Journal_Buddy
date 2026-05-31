@@ -4,7 +4,10 @@ import os
 from pathlib import Path
 
 
-def app_support_dir(app_name: str = "SovereignJournal") -> Path:
+APP_DATA_DIR_NAME = "JournalBuddy"
+
+
+def app_support_dir(app_name: str = APP_DATA_DIR_NAME) -> Path:
     """
     Returns ~/Library/Application Support/<app_name> on macOS.
     Falls back to ~/.<app_name> if the macOS path isn't available.

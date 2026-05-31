@@ -39,6 +39,12 @@ pub struct JournalEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ChatTurn {
+    pub role: String,
+    pub content: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BrainResponse {
     pub question: String,
     pub answer: String,
@@ -184,14 +190,30 @@ async fn delete_journal_entry(app: AppHandle, entry_id: i64) -> Result<DeleteEnt
 }
 
 #[tauri::command]
-async fn ask_brain(app: AppHandle, question: String, top_k: Option<i32>) -> Result<BrainResponse, String> {
+async fn ask_brain(
+    app: AppHandle,
+    question: String,
+    top_k: Option<i32>,
+    history: Option<Vec<ChatTurn>>,
+) -> Result<BrainResponse, String> {
     let py = python::resolver(&app);
-    let k = top_k.unwrap_or(4).to_string();
+    let k = top_k.unwrap_or(8).to_string();
     let ob = ollama_managed::effective_ollama_base();
+    let history_json = serde_json::to_string(&history.unwrap_or_default()).map_err(|e| e.to_string())?;
     let output = py
         .run_json(
             "brain.py",
-            &["--ask", &question, "--top-k", &k, "--ollama-url", &ob, "--json"],
+            &[
+                "--ask",
+                &question,
+                "--top-k",
+                &k,
+                "--ollama-url",
+                &ob,
+                "--history-json",
+                &history_json,
+                "--json",
+            ],
             None,
         )
         .await?;
@@ -199,19 +221,23 @@ async fn ask_brain(app: AppHandle, question: String, top_k: Option<i32>) -> Resu
 }
 
 #[tauri::command]
-async fn ask_brain_stream(app: AppHandle, question: String, top_k: Option<i32>) -> Result<(), String> {
-    let resp = ask_brain(app.clone(), question, top_k).await?;
+async fn ask_brain_stream(
+    app: AppHandle,
+    question: String,
+    top_k: Option<i32>,
+    history: Option<Vec<ChatTurn>>,
+) -> Result<(), String> {
+    let resp = ask_brain(app.clone(), question, top_k, history).await?;
 
     // Minimal "streaming" to satisfy the UI: emit small chunks of the final answer.
     // (If you later switch `brain.py` to true token streaming, swap this for `python::run_streaming`.)
-    let answer = resp.answer;
-    for chunk in answer.as_bytes().chunks(24) {
+    for chunk in resp.answer.as_bytes().chunks(24) {
         if let Ok(s) = std::str::from_utf8(chunk) {
             app.emit("brain-token", s).ok();
         }
         tokio::time::sleep(std::time::Duration::from_millis(10)).await;
     }
-    app.emit("brain-done", ()).ok();
+    app.emit("brain-done", resp).ok();
     Ok(())
 }
 
@@ -426,6 +452,7 @@ pub fn run() {
     let app = tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            ollama_managed::prime_ollama_base_url();
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 ollama_managed::initialize(&handle).await;

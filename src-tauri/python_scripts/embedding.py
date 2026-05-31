@@ -56,7 +56,9 @@ def default_embedder() -> SentenceTransformerEmbedder:
     if _DEFAULT_EMBEDDER is not None:
         return _DEFAULT_EMBEDDER
 
-    override = os.environ.get("SOVEREIGNJOURNAL_EMBED_MODEL")
+    override = os.environ.get("JOURNAL_BUDDY_EMBED_MODEL") or os.environ.get(
+        "SOVEREIGNJOURNAL_EMBED_MODEL"
+    )
     if override:
         _DEFAULT_EMBEDDER = SentenceTransformerEmbedder(override)
         return _DEFAULT_EMBEDDER
